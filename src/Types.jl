@@ -236,6 +236,25 @@ struct FeatureSet{L, N, F} <: AbstractFeatureSet{L, N, F}
     by_labels
 end
 
+# TODO
+function FeatureSet(features::Matrix{F}, labels::Vector{L}) where {F, L}
+    idxs::LinearIndices = keys(labels)
+
+    idxs_by_labels = Dict{L, Vector{Int}}()
+
+    foldl(idxs, init = idxs_by_labels) do acc::Dict{L, Vector{Int}}, idx::Int
+        label::L = labels[idx]
+        if !haskey(acc, label)
+            acc[label] = Int[]
+        end
+        push!(acc[label], idx)
+        return acc
+    end
+
+    return FeatureSet{L, Int, F}([label => [@view features[idx, :] for idx in idxs]
+                                  for (label, idxs) in idxs_by_labels])
+end
+
 function FeatureSet(by_labels::Vector{Pair{L, Vector{Fs}}}
                    ) where {L, F, Fs <: Vector{F}}
     return FeatureSet{L, Int, F}(by_labels)

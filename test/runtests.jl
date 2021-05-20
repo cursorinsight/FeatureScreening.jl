@@ -105,19 +105,44 @@ end
 
     features = ["$i" => [randn(FEATURE_COUNT) .+ (0:Size(FEATURE_COUNT):i/2)
                          for _ in 1:SAMPLE_COUNT]
-                for i in 1:USER_COUNT] |> FeatureSet
+                for i in 1:USER_COUNT]
 
-    selected = screen(features;
-                      reduced_size = REDUCED_SIZE,
-                      step_size    = STEP_SIZE,
-                      config       = config_screen,
-                      after        = accuracies(config = config_test))
+    @testset "Programming API" begin
+        selected = screen(features;
+                          reduced_size = REDUCED_SIZE,
+                          step_size    = STEP_SIZE,
+                          config       = config_screen,
+                          after        = accuracies(config = config_test))
 
-    @test selected isa FeatureSubset{String, Int, Float64}
-    @test USER_COUNT * SAMPLE_COUNT == size(selected, 1)
-    @test REDUCED_SIZE == size(selected, 2)
+        @test selected isa FeatureSubset{String, Int, Float64}
+        @test USER_COUNT * SAMPLE_COUNT == size(selected, 1)
+        @test REDUCED_SIZE == size(selected, 2)
 
-    for feature_name in feature_names(selected)
-        @test FEATURE_COUNT-2*REDUCED_SIZE <= feature_name <= FEATURE_COUNT
+        for feature_name in feature_names(selected)
+            @test FEATURE_COUNT-2*REDUCED_SIZE <= feature_name <= FEATURE_COUNT
+        end
     end
+
+    @testset "Data science API" begin
+        X = [feature_vector'
+             for (label, feature_vectors) in features
+             for feature_vector in feature_vectors] |> Base.splat(vcat)
+        y = [label
+             for (label, feature_vectors) in features
+             for _ in feature_vectors]
+        selected = screen(X, y;
+                          reduced_size = REDUCED_SIZE,
+                          step_size    = STEP_SIZE,
+                          config       = config_screen,
+                          after        = accuracies(config = config_test))
+
+        @test selected isa FeatureSubset{String, Int, Float64}
+        @test USER_COUNT * SAMPLE_COUNT == size(selected, 1)
+        @test REDUCED_SIZE == size(selected, 2)
+
+        for feature_name in feature_names(selected)
+            @test FEATURE_COUNT-2*REDUCED_SIZE <= feature_name <= FEATURE_COUNT
+        end
+    end
+
 end
