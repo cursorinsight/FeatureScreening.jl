@@ -49,7 +49,11 @@ const DEFAULT_SCREEN_CONFIG =
      min_samples_split      = 10,
      min_purity_increase    = 0.0)
 
-function screen(features;
+function screen(features...; kwargs...)
+    return screen(FeatureSet(features...); kwargs...)
+end
+
+function screen(features::AbstractFeatureSet;
                 reduced_size::Integer       = size(features, 2) % 5,
                 step_size::Integer          = size(features, 2) % 10,
                 starters::AbstractVector    = [],
