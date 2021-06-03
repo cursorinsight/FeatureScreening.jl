@@ -60,8 +60,6 @@ function feature_importance(features...;
     return importances
 end
 
-using DecisionTree: Node, Leaf
-
 function fold(f, node::Node; init)
     init = f(init, node)
     init = fold(f, node.left; init = init)
@@ -95,10 +93,7 @@ function feature_importance(forest::RandomForest)::Vector{Pair{Int, Int}}
 end
 
 function accumulate_id!(occurrences::Dict{Int, Int}, node::Node)::Dict{Int, Int}
-    if !haskey(occurrences, node.featid)
-        occurrences[node.featid] = 0
-    end
-    occurrences[node.featid] += 1
+    occurrences[node.featid] = get!(occurrences, node.featid, 0) + 1;
     return occurrences
 end
 
