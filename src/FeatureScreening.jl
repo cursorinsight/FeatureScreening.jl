@@ -54,8 +54,8 @@ function screen(features...; kwargs...)
 end
 
 function screen(features::AbstractFeatureSet;
-                reduced_size::Integer       = size(features, 2) % 5,
-                step_size::Integer          = size(features, 2) % 10,
+                reduced_size::Integer       = floor(Integer, size(features, 2) / 5),
+                step_size::Integer          = floor(Integer, size(features, 2) / 10),
                 starters::AbstractVector    = [],
                 config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
                 before::Function            = skip,
