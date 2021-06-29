@@ -8,78 +8,13 @@
 ### Imports
 ###=============================================================================
 
-using Test
-
 using FeatureScreening: FeatureSet, FeatureSubset, feature_names
 
-# Utility tests
-using FeatureScreening.Utilities: partition, ExpStep, Size
-
-# API tests
 using FeatureScreening: screen, accuracies
 
-using Random: seed!, shuffle
-
 ###=============================================================================
 ### Tests
 ###=============================================================================
-
-seed!(1)
-
-include("server-tests.jl")
-
-###=============================================================================
-### Tests
-###=============================================================================
-
-@testset "`AbstractFeatureSet` function" begin
-    let feature_set = FeatureSet([1 => [[10, 11], [11, 11], [13, 12]],
-                                  2 => [[21, 20], [22, 21], [21, 22]],
-                                  3 => [[33, 32], [31, 34], [39, 30]]]),
-        feature_subset = feature_set[[1]]
-
-        @test [1 => [10, 11], 1 => [11, 11], 1 => [13, 12],
-               2 => [21, 20], 2 => [22, 21], 2 => [21, 22],
-               3 => [33, 32], 3 => [31, 34], 3 => [39, 30]
-              ] == map(identity, feature_set)
-
-        @test [1 => [10], 1 => [11], 1 => [13],
-               2 => [21], 2 => [22], 2 => [21],
-               3 => [33], 3 => [31], 3 => [39]
-              ] == map(identity, feature_subset)
-    end
-end
-
-@testset "Utilities" begin
-
-    @testset "Partition" begin
-        @test [11:11, 12:12, 13:13, 14:14]  == partition(11:14, 1)
-        @test [11:12, 13:14]                == partition(11:14, 2)
-        @test [11:13]                       == partition(11:14, 3)
-        @test [11:14]                       == partition(11:14, 4)
-
-        @test [11:11, 12:12, 13:13, 14:14]  == partition(11:14, 1; rest = true)
-        @test [11:12, 13:14]                == partition(11:14, 2; rest = true)
-        @test [11:13, 14:14]                == partition(11:14, 3; rest = true)
-        @test [11:14]                       == partition(11:14, 4; rest = true)
-    end
-
-    @testset "Exponential range" begin
-        @test [1]           == (1:ExpStep(2):1)
-        @test [1, 2]        == (1:ExpStep(2):2)
-        @test [1, 2]        == (1:ExpStep(2):3)
-        @test [1, 2, 4]     == (1:ExpStep(2):4)
-        @test [1, 2, 4]     == (1:ExpStep(2):5)
-        @test [1, 2, 4]     == (1:ExpStep(2):6)
-        @test [1, 2, 4]     == (1:ExpStep(2):7)
-        @test [1, 2, 4, 8]  == (1:ExpStep(2):8)
-
-        @test []                == (1:Size(0):5)
-        @test_throws ArgumentError (1:Size(1):5)
-        @test [1, 5]            == (1:Size(2):5)
-        @test [1, 3, 5]         == (1:Size(3):5)
-    end
-end
 
 @testset "Basics" begin
     USER_COUNT::Int = 20

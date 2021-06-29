@@ -4,7 +4,9 @@ authors = ["Cursor Insight <info@cursorinsight.com>"]
 version = "0.1.0"
 
 [deps]
+Actors = "18269d71-cc38-4e02-b8c8-1db30113a6dd"
 DecisionTree = "7806a523-6efd-50cb-b5f6-3fa6f1930dbb"
+GenServers = "7ba82512-5dde-4a56-aa4f-e00f617b4033"
 IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"

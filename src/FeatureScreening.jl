@@ -36,6 +36,8 @@ using Base.Iterators: Enumerate
 using DecisionTree: nfoldCV_forest
 using Statistics: mean
 
+include("Server.jl")
+
 ###=============================================================================
 ### API
 ###=============================================================================
@@ -53,6 +55,8 @@ function screen(features...; kwargs...)
     return screen(FeatureSet(features...); kwargs...)
 end
 
+using FeatureScreening.Server: start, stop, apply, get_value
+
 function screen(features::AbstractFeatureSet;
                 reduced_size::Integer       = floor(Integer, size(features, 2) / 5),
                 step_size::Integer          = floor(Integer, size(features, 2) / 10),
@@ -62,26 +66,36 @@ function screen(features::AbstractFeatureSet;
                 after::Function             = skip)
     iterator::Enumerate = enumerate(partition(features, step_size; rest = true))
 
-    return foldl(iterator; init = features[starters]) do features, (i, new)
+    server = start(features[starters])
+
+    for (i, new) in iterator
         @info "Turn #$(i)"
 
         # Before the computation
         before(features, new)
 
         @debug "Select" from = features plus = new
-        merge!(features, new)
+        apply(server) do features
+            return merge!(features, new)
+        end
 
-        features = select_features(features;
+        apply(server) do features
+            return select_features(features;
                                    count = reduced_size,
                                    config = config)
+        end
 
         # After the computation
         after(features)
 
         @debug "Selected features" selected = feature_names(features)
-
-        return features
     end
+
+    selected = get_value(server)
+
+    stop(server)
+
+    return selected
 end
 
 function select_features(features::AbstractFeatureSet{L, N, F};
