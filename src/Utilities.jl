@@ -60,7 +60,12 @@ function (::Colon)(start::Real, size::S, stop::Real) where {S <: Size}
 end
 
 function Base.steprange_last(start, step::ExpStep, stop)
-    return floor(Int, log(step.base, stop))
+    # TODO
+    if iszero(stop)
+        return -1
+    else
+        return floor(Int, log(step.base, stop))
+    end
 end
 
 function Base.iterate(range::StepRange{Int, ExpStep{Int}}, state = nothing)
@@ -82,8 +87,8 @@ const DEFAULT_BUILD_FOREST_CONFIG =
      min_samples_split      = 2,
      min_purity_increase    = 0.0)
 
-function build_forest(labels::Vector{L},
-                      features::Matrix{F};
+function build_forest(labels::AbstractVector{L},
+                      features::AbstractMatrix{F};
                       config::NamedTuple = (;),
                       kwargs...
                      )::RandomForest{F, L} where {L, F}
@@ -110,8 +115,8 @@ const DEFAULT_NFOLDCV_FOREST_CONFIG =
      min_samples_split      = 2,
      min_purity_increase    = 0.0)
 
-function nfoldCV_forest(labels::Vector,
-                        features::Matrix;
+function nfoldCV_forest(labels::AbstractVector,
+                        features::AbstractMatrix;
                         config::NamedTuple = (;),
                         kwargs...)
     config::NamedTuple = (; DEFAULT_NFOLDCV_FOREST_CONFIG..., config...)

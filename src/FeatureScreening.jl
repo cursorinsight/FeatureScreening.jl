@@ -11,10 +11,10 @@ module FeatureScreening
 ###=============================================================================
 
 # Types
-export AbstractFeatureSet, FeatureSet, FeatureSubset
+export FeatureSet
 
 # Types API
-export feature_names
+export names
 
 ###=============================================================================
 ### Imports
@@ -28,8 +28,8 @@ using FeatureScreening.Utilities: ExpStep, partition
 
 # Feature set related
 include("Types.jl")
-using FeatureScreening.Types: AbstractFeatureSet, FeatureSet, FeatureSubset
-using FeatureScreening.Types: by_labels, feature_names, mtx, feature_count
+using FeatureScreening.Types: FeatureSet
+using FeatureScreening.Types: names
 
 # API dependencies
 using Base.Iterators: Enumerate
@@ -49,54 +49,54 @@ const DEFAULT_SCREEN_CONFIG =
      min_samples_split      = 10,
      min_purity_increase    = 0.0)
 
-function screen(features...; kwargs...)
-    return screen(FeatureSet(features...); kwargs...)
+function screen(feature_set...; kwargs...)
+    return screen(FeatureSet(feature_set...); kwargs...)
 end
 
-function screen(features::AbstractFeatureSet;
+function screen(feature_set::FeatureSet;
                 reduced_size::Integer       = floor(Integer, size(features, 2) / 5),
                 step_size::Integer          = floor(Integer, size(features, 2) / 10),
                 starters::AbstractVector    = [],
                 config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
                 before::Function            = skip,
-                after::Function             = skip)
-    iterator::Enumerate = enumerate(partition(features, step_size; rest = true))
+                after::Function             = skip
+               )::FeatureSet
+    iterator::Enumerate = enumerate(partition(feature_set, step_size; rest = true))
 
-    return foldl(iterator; init = features[starters]) do features, (i, new)
+    return foldl(iterator; init = feature_set[starters]) do selected, (i, new)
         @info "Turn #$(i)"
 
         # Before the computation
-        before(features, new)
+        before(selected, new)
 
         @debug "Select" from = features plus = new
-        merge!(features, new)
 
-        features = select_features(features;
+        to_be_selected::FeatureSet = merge(selected, new)
+
+        selected = select_features(to_be_selected;
                                    count = reduced_size,
                                    config = config)
 
         # After the computation
-        after(features)
+        after(selected)
 
-        @debug "Selected features" selected = feature_names(features)
+        @debug "Selected features" selected = names(selected)
 
-        return features
+        return selected
     end
 end
 
-function select_features(features::AbstractFeatureSet{L, N, F};
-                         count = count,
-                         config = config
-                        )::AbstractFeatureSet{L, N, F} where {L, N, F}
+function select_features(features::FeatureSet{L, N, F};
+                         count::Int = 5,
+                         config::NamedTuple = (;)
+                        )::FeatureSet{L, N, F} where {L, N, F}
     importances::Vector{Pair{N, <: Real}} =
         feature_importance(features; config = config)
 
     return features[importants(importances; count = count)]
 end
 
-function accuracy(features::AbstractFeatureSet;
-                  config::NamedTuple = (;)
-                 )::Float64
+function accuracy(features::FeatureSet; config::NamedTuple = (;))::Float64
     accuracies::Vector{Float64} =
         nfoldCV_forest(features; config, verbose = false)
     accuracy::Float64 = mean(accuracies)
@@ -104,15 +104,16 @@ function accuracy(features::AbstractFeatureSet;
     return accuracy
 end
 
-function accuracies(features::AbstractFeatureSet{L, N, F};
+function accuracies(features::FeatureSet;
                     step = ExpStep(2),
                     config::NamedTuple = (;)
-                   )::Vector{Pair{Int, Float64}} where {L, N, F}
-    fns::Vector{N} = feature_names(features)
+                   )::Vector{Pair{Int, Float64}}
+    fns::Vector = names(features)
     return [n => accuracy(features[fns[1:n]]; config = config)
             for n in 1:step:length(fns)]
 end
 
+# TODO
 function accuracies(; kwargs...)::Function
     return function (features)
         return accuracies(features; kwargs...)

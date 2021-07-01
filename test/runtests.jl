@@ -10,7 +10,7 @@
 
 using Test
 
-using FeatureScreening: FeatureSet, FeatureSubset, feature_names
+using FeatureScreening: FeatureSet, names
 
 # Utility tests
 using FeatureScreening.Utilities: partition, ExpStep, Size
@@ -30,20 +30,41 @@ seed!(1)
 ### Tests
 ###=============================================================================
 
-@testset "`AbstractFeatureSet` function" begin
-    let feature_set = FeatureSet([1 => [[10, 11], [11, 11], [13, 12]],
-                                  2 => [[21, 20], [22, 21], [21, 22]],
-                                  3 => [[33, 32], [31, 34], [39, 30]]]),
-        feature_subset = feature_set[[1]]
+@testset "`FeatureSet` function" begin
+    let feature_set = FeatureSet([1, 1, 1, 2, 2, 2, 3, 3, 3],
+                                 ["feature1", "feature2"],
+                                 [10 11;
+                                  11 11;
+                                  13 12;
+                                  21 20;
+                                  22 21;
+                                  21 22;
+                                  33 32;
+                                  31 34;
+                                  39 30]),
+        feature_subset = feature_set[["feature1"]]
 
-        @test [1 => [10, 11], 1 => [11, 11], 1 => [13, 12],
-               2 => [21, 20], 2 => [22, 21], 2 => [21, 22],
-               3 => [33, 32], 3 => [31, 34], 3 => [39, 30]
+        @test feature_subset isa FeatureSet
+        @test [(1, [10, 11]),
+               (1, [11, 11]),
+               (1, [13, 12]),
+               (2, [21, 20]),
+               (2, [22, 21]),
+               (2, [21, 22]),
+               (3, [33, 32]),
+               (3, [31, 34]),
+               (3, [39, 30])
               ] == map(identity, feature_set)
 
-        @test [1 => [10], 1 => [11], 1 => [13],
-               2 => [21], 2 => [22], 2 => [21],
-               3 => [33], 3 => [31], 3 => [39]
+        @test [(1, [10]),
+               (1, [11]),
+               (1, [13]),
+               (2, [21]),
+               (2, [22]),
+               (2, [21]),
+               (3, [33]),
+               (3, [31]),
+               (3, [39])
               ] == map(identity, feature_subset)
     end
 end
@@ -80,69 +101,95 @@ end
 end
 
 @testset "Basics" begin
-    USER_COUNT::Int = 20
-    SAMPLE_COUNT::Int = 20
-    FEATURE_COUNT::Int = 20
-    STEP_SIZE::Int = 6
-    REDUCED_SIZE::Int = 10
 
     # TODO some computed config values from input dimensions
     config_screen = (n_subfeatures          = -1,
-                     n_trees                = 1000,
+                     n_trees                = 20,
                      partial_sampling       = 0.9,
                      max_depth              = -1,
-                     min_samples_leaf       = 10,
-                     min_samples_split      = 10,
+                     min_samples_leaf       = 2,
+                     min_samples_split      = 3,
                      min_purity_increase    = 0.0)
 
     config_test   = (n_subfeatures          = -1,
-                     n_trees                = 2000,
+                     n_trees                = 10,
                      partial_sampling       = 0.8,
                      max_depth              = -1,
                      min_samples_leaf       = 1,
                      min_samples_split      = 2,
                      min_purity_increase    = 0.01)
 
-    features = ["$i" => [randn(FEATURE_COUNT) .+ (0:Size(FEATURE_COUNT):i/2)
-                         for _ in 1:SAMPLE_COUNT]
-                for i in 1:USER_COUNT]
+    LABEL_COUNT::Int    = 5
+    SAMPLE_COUNT::Int   = 5
+    FEATURE_COUNT::Int  = 11
+    STEP_SIZE::Int      = 3
+    REDUCED_SIZE::Int   = 3
 
-    @testset "Programming API" begin
-        selected = screen(features;
+    y::Vector{Symbol} =
+        [:a, :a, :a, :a, :a,
+         :b, :b, :b, :b, :b,
+         :c, :c, :c, :c, :c,
+         :d, :d, :d, :d, :d,
+         :e, :e, :e, :e, :e]
+
+    feature_names::Vector{String} =
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
+
+    X::Matrix{Float64} =
+        [0.0 -0.2 -0.4 -0.6 -0.8 -1.0 -1.2 -1.4 -1.6 -1.8 -2.0;
+         0.0 -0.2 -0.4 -0.6 -0.8 -1.0 -1.2 -1.4 -1.6 -1.8 -2.0;
+         0.0 -0.2 -0.4 -0.6 -0.8 -1.0 -1.2 -1.4 -1.6 -1.8 -2.0;
+         0.0 -0.2 -0.4 -0.6 -0.8 -1.0 -1.2 -1.4 -1.6 -1.8 -2.0;
+         0.0 -0.2 -0.4 -0.6 -0.8 -1.0 -1.2 -1.4 -1.6 -1.8 -2.0;
+         0.0 -0.1 -0.2 -0.3 -0.4 -0.5 -0.6 -0.7 -0.8 -0.9 -1.0;
+         0.0 -0.1 -0.2 -0.3 -0.4 -0.5 -0.6 -0.7 -0.8 -0.9 -1.0;
+         0.0 -0.1 -0.2 -0.3 -0.4 -0.5 -0.6 -0.7 -0.8 -0.9 -1.0;
+         0.0 -0.1 -0.2 -0.3 -0.4 -0.5 -0.6 -0.7 -0.8 -0.9 -1.0;
+         0.0 -0.1 -0.2 -0.3 -0.4 -0.5 -0.6 -0.7 -0.8 -0.9 -1.0;
+         0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0;
+         0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0;
+         0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0;
+         0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0;
+         0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0;
+         0.0 +0.1 +0.2 +0.3 +0.4 +0.5 +0.6 +0.7 +0.8 +0.9 +1.0;
+         0.0 +0.1 +0.2 +0.3 +0.4 +0.5 +0.6 +0.7 +0.8 +0.9 +1.0;
+         0.0 +0.1 +0.2 +0.3 +0.4 +0.5 +0.6 +0.7 +0.8 +0.9 +1.0;
+         0.0 +0.1 +0.2 +0.3 +0.4 +0.5 +0.6 +0.7 +0.8 +0.9 +1.0;
+         0.0 +0.1 +0.2 +0.3 +0.4 +0.5 +0.6 +0.7 +0.8 +0.9 +1.0;
+         0.0 +0.2 +0.4 +0.6 +0.8 +1.0 +1.2 +1.4 +1.6 +1.8 +2.0;
+         0.0 +0.2 +0.4 +0.6 +0.8 +1.0 +1.2 +1.4 +1.6 +1.8 +2.0;
+         0.0 +0.2 +0.4 +0.6 +0.8 +1.0 +1.2 +1.4 +1.6 +1.8 +2.0;
+         0.0 +0.2 +0.4 +0.6 +0.8 +1.0 +1.2 +1.4 +1.6 +1.8 +2.0;
+         0.0 +0.2 +0.4 +0.6 +0.8 +1.0 +1.2 +1.4 +1.6 +1.8 +2.0]
+
+    X .+= randn(LABEL_COUNT * SAMPLE_COUNT, FEATURE_COUNT)
+
+    feature_set = FeatureSet(y, feature_names, X)
+
+    @testset "API #1" begin
+        selected = screen(feature_set;
                           reduced_size = REDUCED_SIZE,
                           step_size    = STEP_SIZE,
                           config       = config_screen,
                           after        = accuracies(config = config_test))
 
-        @test selected isa FeatureSubset{String, Int, Float64}
-        @test USER_COUNT * SAMPLE_COUNT == size(selected, 1)
+        @test selected isa FeatureSet{Symbol, String, Float64}
+        @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)
         @test REDUCED_SIZE == size(selected, 2)
-
-        for feature_name in feature_names(selected)
-            @test FEATURE_COUNT-2*REDUCED_SIZE <= feature_name <= FEATURE_COUNT
-        end
+        @test names(selected) ⊆ ["8", "9", "10", "11"]
     end
 
-    @testset "Data science API" begin
-        X = [feature_vector'
-             for (label, feature_vectors) in features
-             for feature_vector in feature_vectors] |> Base.splat(vcat)
-        y = [label
-             for (label, feature_vectors) in features
-             for _ in feature_vectors]
+    @testset "API #2" begin
         selected = screen(X, y;
                           reduced_size = REDUCED_SIZE,
                           step_size    = STEP_SIZE,
                           config       = config_screen,
                           after        = accuracies(config = config_test))
 
-        @test selected isa FeatureSubset{String, Int, Float64}
-        @test USER_COUNT * SAMPLE_COUNT == size(selected, 1)
+        @test selected isa FeatureSet{Symbol, Int, Float64}
+        @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)
         @test REDUCED_SIZE == size(selected, 2)
-
-        for feature_name in feature_names(selected)
-            @test FEATURE_COUNT-2*REDUCED_SIZE <= feature_name <= FEATURE_COUNT
-        end
+        @test names(selected) ⊆ 8:11
     end
 
 end
