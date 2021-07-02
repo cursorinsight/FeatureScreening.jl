@@ -14,26 +14,26 @@ module FeatureScreening
 export FeatureSet
 
 # Types API
-export names
+export names, load, save
 
 ###=============================================================================
 ### Imports
 ###=============================================================================
 
-include("importance.jl")
-
 # Utilities
 include("Utilities.jl")
 using FeatureScreening.Utilities: ExpStep, partition
 
+include("importance.jl")
+
 # Feature set related
 include("Types.jl")
 using FeatureScreening.Types: FeatureSet
-using FeatureScreening.Types: names
+using FeatureScreening.Types: names, load, save
 
 # API dependencies
 using Base.Iterators: Enumerate
-using DecisionTree: nfoldCV_forest
+using FeatureScreening.Utilities: nfoldCV_forest
 using Statistics: mean
 
 ###=============================================================================
@@ -54,8 +54,8 @@ function screen(feature_set...; kwargs...)
 end
 
 function screen(feature_set::FeatureSet;
-                reduced_size::Integer       = floor(Integer, size(features, 2) / 5),
-                step_size::Integer          = floor(Integer, size(features, 2) / 10),
+                reduced_size::Integer       = size(feature_set, 2) ÷ 5,
+                step_size::Integer          = size(feature_set, 2) ÷ 10,
                 starters::AbstractVector    = [],
                 config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
                 before::Function            = skip,

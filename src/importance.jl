@@ -8,9 +8,10 @@
 ### Imports
 ###=============================================================================
 
+using FeatureScreening.Utilities:
+    build_forest
+
 using DecisionTree:
-    build_forest,
-    RandomForestRegressor,
     Ensemble as RandomForest,
     Node,
     Leaf

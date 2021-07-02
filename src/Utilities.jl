@@ -5,7 +5,9 @@ module Utilities
 ###=============================================================================
 
 using DecisionTree: Ensemble as RandomForest
-import DecisionTree: build_forest, nfoldCV_forest
+import DecisionTree:
+    build_forest as _build_forest,
+    nfoldCV_forest as _nfoldCV_forest
 
 ###=============================================================================
 ### API
@@ -93,16 +95,16 @@ function build_forest(labels::AbstractVector{L},
                       kwargs...
                      )::RandomForest{F, L} where {L, F}
     config::NamedTuple = (; DEFAULT_BUILD_FOREST_CONFIG..., config...)
-    return build_forest(labels,
-                        features,
-                        config.n_subfeatures,
-                        config.n_trees,
-                        config.partial_sampling,
-                        config.max_depth,
-                        config.min_samples_leaf,
-                        config.min_samples_split,
-                        config.min_purity_increase;
-                        kwargs...)
+    return _build_forest(labels,
+                         features,
+                         config.n_subfeatures,
+                         config.n_trees,
+                         config.partial_sampling,
+                         config.max_depth,
+                         config.min_samples_leaf,
+                         config.min_samples_split,
+                         config.min_purity_increase;
+                         kwargs...)
 end
 
 const DEFAULT_NFOLDCV_FOREST_CONFIG =
@@ -120,17 +122,17 @@ function nfoldCV_forest(labels::AbstractVector,
                         config::NamedTuple = (;),
                         kwargs...)
     config::NamedTuple = (; DEFAULT_NFOLDCV_FOREST_CONFIG..., config...)
-    return nfoldCV_forest(labels,
-                          features,
-                          config.n_folds,
-                          config.n_subfeatures,
-                          config.n_trees,
-                          config.partial_sampling,
-                          config.max_depth,
-                          config.min_samples_leaf,
-                          config.min_samples_split,
-                          config.min_purity_increase;
-                          kwargs...)
+    return _nfoldCV_forest(labels,
+                           features,
+                           config.n_folds,
+                           config.n_subfeatures,
+                           config.n_trees,
+                           config.partial_sampling,
+                           config.max_depth,
+                           config.min_samples_leaf,
+                           config.min_samples_split,
+                           config.min_purity_increase;
+                           kwargs...)
 end
 
 end # module

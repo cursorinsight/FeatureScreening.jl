@@ -22,15 +22,18 @@ export PearsonCorrelation
 ###-----------------------------------------------------------------------------
 
 # Basic API
-import Base: show, getindex, ndims, size, length, iterate, merge
+import Base: show, getindex, ndims, size, length, iterate, merge, rand
 import Base: eachrow, eachcol, iterate
 import FeatureScreening.Utilities: partition
 import Base: names
 
 # Research API
 using DecisionTree: Ensemble as RandomForest
-import DecisionTree: build_forest, nfoldCV_forest
+import FeatureScreening.Utilities: build_forest, nfoldCV_forest
 import FeatureScreening: feature_importance
+
+# File API
+using HDF5: h5open
 
 ###-----------------------------------------------------------------------------
 ### PearsonCorrelation imports
@@ -172,6 +175,37 @@ function partition(features::FeatureSet, n::Int; kwargs...)
             for part in partition(names(features), n; kwargs...))
 end
 
+"""
+This function generates only per-label-BALANCED feature set.
+"""
+function rand(::Type{FeatureSet{L, N, F}},
+              sample_count::Integer = 10,
+              feature_count::Integer = 10;
+              label_count::Integer = sample_count ÷ 5
+             )::FeatureSet{L, N, F} where {L, N <: Integer, F <: AbstractFloat}
+    (d, r) = divrem(sample_count, label_count)
+    @assert iszero(r)
+
+    labels::Vector{L} = L.(repeat(1:label_count, d))
+    names::Vector{N} = N.(collect(1:feature_count))
+    features::Matrix{F} =
+        [randn() + (j * 7.0 / feature_count) * ((i-1) % label_count + 1) / label_count
+         for i in 1:sample_count, j in 1:feature_count]
+
+    return FeatureSet(labels, names, features)
+end
+
+function rand(::Type{FeatureSet},
+              sample_count::Integer = 10,
+              feature_count::Integer = 10;
+              label_count::Integer = floor(Int, sample_count / 5)
+             )::FeatureSet
+    return rand(FeatureSet{Int, Int, Float64},
+                sample_count,
+                feature_count;
+                label_count)
+end
+
 ###-----------------------------------------------------------------------------
 ### Feature set data API
 ###-----------------------------------------------------------------------------
@@ -218,6 +252,30 @@ function feature_importance(feature_set::FeatureSet{L, N};
 
     return [names(feature_set)[idx] => importance
             for (idx, importance) in importances]
+end
+
+###-----------------------------------------------------------------------------
+### I/O: save, load
+###-----------------------------------------------------------------------------
+
+function save(feature_set::FeatureSet, filename::AbstractString)::Nothing
+    h5open(filename, "w") do fid
+        fs = features(feature_set)
+        fid["features"] = (fs isa Matrix) ? fs : copy(fs)
+        fid["labels"] = labels(feature_set)
+        fid["names"] = collect(names(feature_set))
+    end
+
+    return nothing
+end
+
+function load(filename::AbstractString)::FeatureSet
+    return h5open(filename) do fid
+        features = read(fid, "features")
+        labels = read(fid, "labels")
+        names = read(fid, "names")
+        return FeatureSet(labels, names, features)
+    end
 end
 
 ##==============================================================================

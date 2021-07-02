@@ -67,6 +67,17 @@ seed!(1)
                (3, [39])
               ] == map(identity, feature_subset)
     end
+
+    let feature_set = rand(FeatureSet, 80, 30)
+        @test feature_set isa FeatureSet{Int, Int, Float64}
+        @test size(feature_set) == (80, 30)
+    end
+
+    let feature_set = rand(FeatureSet{Char, Int, Float64}, 80, 30)
+        @test feature_set isa FeatureSet{Char, Int, Float64}
+        @test size(feature_set) == (80, 30)
+    end
+
 end
 
 @testset "Utilities" begin
@@ -193,3 +204,5 @@ end
     end
 
 end
+
+include("loader-tests.jl")
