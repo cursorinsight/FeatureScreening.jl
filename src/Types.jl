@@ -29,7 +29,8 @@ import Base: names
 
 # Research API
 using DecisionTree: Ensemble as RandomForest
-import FeatureScreening.Utilities: build_forest, nfoldCV_forest
+import DecisionTree: build_forest, nfoldCV_forest
+using FeatureScreening.Utilities: _build_forest, _nfoldCV_forest
 import FeatureScreening: feature_importance
 
 # File API
@@ -232,16 +233,16 @@ end
 function build_forest(feature_set::FeatureSet{L, N, F};
                       config = (;)
                      ) where {L, N, F}
-    return build_forest(labels(feature_set), features(feature_set); config)
+    return _build_forest(labels(feature_set), features(feature_set); config)
 end
 
 function nfoldCV_forest(feature_set::FeatureSet;
                         config = (;),
                         verbose = false)
-    return nfoldCV_forest(labels(feature_set),
-                          features(feature_set);
-                          config,
-                          verbose)
+    return _nfoldCV_forest(labels(feature_set),
+                           features(feature_set);
+                           config,
+                           verbose)
 end
 
 function feature_importance(feature_set::FeatureSet{L, N};

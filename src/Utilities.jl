@@ -5,9 +5,8 @@ module Utilities
 ###=============================================================================
 
 using DecisionTree: Ensemble as RandomForest
-import DecisionTree:
-    build_forest as _build_forest,
-    nfoldCV_forest as _nfoldCV_forest
+
+using DecisionTree: build_forest, nfoldCV_forest
 
 ###=============================================================================
 ### API
@@ -89,22 +88,22 @@ const DEFAULT_BUILD_FOREST_CONFIG =
      min_samples_split      = 2,
      min_purity_increase    = 0.0)
 
-function build_forest(labels::AbstractVector{L},
-                      features::AbstractMatrix{F};
-                      config::NamedTuple = (;),
-                      kwargs...
-                     )::RandomForest{F, L} where {L, F}
+function _build_forest(labels::AbstractVector{L},
+                       features::AbstractMatrix{F};
+                       config::NamedTuple = (;),
+                       kwargs...
+                      )::RandomForest{F, L} where {L, F}
     config::NamedTuple = (; DEFAULT_BUILD_FOREST_CONFIG..., config...)
-    return _build_forest(labels,
-                         features,
-                         config.n_subfeatures,
-                         config.n_trees,
-                         config.partial_sampling,
-                         config.max_depth,
-                         config.min_samples_leaf,
-                         config.min_samples_split,
-                         config.min_purity_increase;
-                         kwargs...)
+    return build_forest(labels,
+                        features,
+                        config.n_subfeatures,
+                        config.n_trees,
+                        config.partial_sampling,
+                        config.max_depth,
+                        config.min_samples_leaf,
+                        config.min_samples_split,
+                        config.min_purity_increase;
+                        kwargs...)
 end
 
 const DEFAULT_NFOLDCV_FOREST_CONFIG =
@@ -117,22 +116,22 @@ const DEFAULT_NFOLDCV_FOREST_CONFIG =
      min_samples_split      = 2,
      min_purity_increase    = 0.0)
 
-function nfoldCV_forest(labels::AbstractVector,
-                        features::AbstractMatrix;
-                        config::NamedTuple = (;),
-                        kwargs...)
+function _nfoldCV_forest(labels::AbstractVector,
+                         features::AbstractMatrix;
+                         config::NamedTuple = (;),
+                         kwargs...)
     config::NamedTuple = (; DEFAULT_NFOLDCV_FOREST_CONFIG..., config...)
-    return _nfoldCV_forest(labels,
-                           features,
-                           config.n_folds,
-                           config.n_subfeatures,
-                           config.n_trees,
-                           config.partial_sampling,
-                           config.max_depth,
-                           config.min_samples_leaf,
-                           config.min_samples_split,
-                           config.min_purity_increase;
-                           kwargs...)
+    return nfoldCV_forest(labels,
+                          features,
+                          config.n_folds,
+                          config.n_subfeatures,
+                          config.n_trees,
+                          config.partial_sampling,
+                          config.max_depth,
+                          config.min_samples_leaf,
+                          config.min_samples_split,
+                          config.min_purity_increase;
+                          kwargs...)
 end
 
 end # module
