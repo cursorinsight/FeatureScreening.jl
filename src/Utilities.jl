@@ -37,27 +37,29 @@ struct ExpStep{T} <: AbstractStep
     end
 end
 
-struct Size{T}
-    n::T
+function _first(range::StepRange{Int, ExpStep{Int}})
+    return ceil(log(range.step.base, range.start))
 end
 
-struct ZeroStep <: AbstractStep end
+function _last(range::StepRange{Int, ExpStep{Int}})
+    return floor(log(range.step.base, range.stop))
+end
 
-Base.zero(::T) where {T <: AbstractStep} = zero(T)
-Base.zero(::Type{T}) where {T <: AbstractStep} = ZeroStep()
-Base.:<(::ZeroStep, ::AbstractStep) = true
+function Base.first(range::StepRange{Int, ExpStep{Int}})
+    return _first(range) ^ range.step.base
+end
+
+function Base.last(range::StepRange{Int, ExpStep{Int}})
+    return _last(range) ^ range.step.base
+end
 
 # TODO
-function Base.length(range::StepRange{Int, <: ExpStep})
-    return range.stop - range.start + 1
+function Base.length(range::StepRange{Int, ExpStep{Int}})
+    return _last(range) - _first(range) + 1
 end
 
 function (::Colon)(start::Real, step::S, stop::Real) where {S <: ExpStep}
-    return StepRange{Int, S}(ceil(Int, log(step.base, start)), step, stop)
-end
-
-function (::Colon)(start::Real, size::S, stop::Real) where {S <: Size}
-    return range(start, stop; length = size.n)
+    return StepRange{Int, S}(start, step, stop)
 end
 
 function Base.steprange_last(start, step::ExpStep, stop)
@@ -71,12 +73,20 @@ end
 
 function Base.iterate(range::StepRange{Int, ExpStep{Int}}, state = nothing)
     if state isa Nothing
-        state = range.start
+        state = ceil(Int, log(step.base, range.start))
     end
     state > range.stop && return nothing
 
     # TODO
     return (Int(range.step.base ^ float(state)), state+1)
+end
+
+struct Size{T}
+    n::T
+end
+
+function (::Colon)(start::Real, size::S, stop::Real) where {S <: Size}
+    return range(start, stop; length = size.n)
 end
 
 const DEFAULT_BUILD_FOREST_CONFIG =

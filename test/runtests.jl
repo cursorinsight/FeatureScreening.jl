@@ -116,6 +116,8 @@ end
     end
 
     @testset "Exponential range" begin
+        @test_throws ArgumentError (0:ExpStep(2):2)
+
         @test [1]           == (1:ExpStep(2):1)
         @test [1, 2]        == (1:ExpStep(2):2)
         @test [1, 2]        == (1:ExpStep(2):3)
@@ -125,6 +127,33 @@ end
         @test [1, 2, 4]     == (1:ExpStep(2):7)
         @test [1, 2, 4, 8]  == (1:ExpStep(2):8)
 
+        @test [1, 2, 4, 8]      == (1:ExpStep(2):15)
+        @test [1, 2, 4, 8, 16]  == (1:ExpStep(2):16)
+        @test [1, 2, 4, 8, 16]  == (1:ExpStep(2):17)
+
+        @test [1, 3, 9, 27, 81]         == (1:ExpStep(3):242)
+        @test [1, 3, 9, 27, 81, 243]    == (1:ExpStep(3):243)
+        @test [1, 3, 9, 27, 81, 243]    == (1:ExpStep(3):244)
+
+        @test []        == (3:ExpStep(2):1)
+        @test []        == (3:ExpStep(2):2)
+        @test []        == (3:ExpStep(2):3)
+        @test [4]       == (3:ExpStep(2):4)
+        @test [4]       == (3:ExpStep(2):5)
+        @test [4]       == (3:ExpStep(2):6)
+        @test [4]       == (3:ExpStep(2):7)
+        @test [4, 8]    == (3:ExpStep(2):8)
+
+        @test [8]       == (5:ExpStep(2):15)
+        @test [8, 16]   == (5:ExpStep(2):16)
+        @test [8, 16]   == (5:ExpStep(2):17)
+
+        @test []        == (100:ExpStep(3):242)
+        @test [243]     == (100:ExpStep(3):243)
+        @test [243]     == (100:ExpStep(3):244)
+    end
+
+    @testset "Sized range" begin
         @test []                == (1:Size(0):5)
         @test_throws ArgumentError (1:Size(1):5)
         @test [1, 5]            == (1:Size(2):5)
