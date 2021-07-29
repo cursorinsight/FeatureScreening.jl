@@ -98,24 +98,15 @@ function show(io::IO, features::FeatureSet{L, N, F})::Nothing where {L, N, F}
 end
 
 function getindex(feature_set::FeatureSet{L, N, F},
-                  names::AbstractVector,
+                  i,
+                  names,
                  )::FeatureSet{L, N, F} where {L, N, F}
-    if isempty(names)
-        return FeatureSet(labels(feature_set),
-                          N[],
-                          @view features(feature_set)[:, []])
-    else
-        idxs::Vector{Int} = [feature_set.name_idxs[name] for name in names]
-        return FeatureSet(labels(feature_set),
-                          names,
-                          @view features(feature_set)[:, idxs])
-    end
-end
+    j::Vector{Int} = [feature_set.name_idxs[name] for name in names]
 
-function getindex(feature_set::FeatureSet{L, N, F},
-                  name::N
-                 )::SubArray{F, 1} where {L, N, F}
-    return @view features(feature_set)[:, feature_set.name_idxs[name]]
+    _labels::AbstractVector{L} = @view labels(feature_set)[i]
+    _names::AbstractVector{N} = convert(AbstractVector{N}, names)
+    _features::AbstractMatrix{F} = @view features(feature_set)[i, j]
+    return FeatureSet(_labels, _names, _features)
 end
 
 function ndims(feature_set::FeatureSet)::Int
@@ -171,9 +162,8 @@ function merge(a::FeatureSet, b::FeatureSet)::FeatureSet
                       unique_features)
 end
 
-function partition(features::FeatureSet, n::Int; kwargs...)
-    return (features[part]
-            for part in partition(names(features), n; kwargs...))
+function merge(xs::FeatureSet...)::FeatureSet
+    return reduce(merge, xs)
 end
 
 """
@@ -182,15 +172,19 @@ This function generates only per-label-BALANCED feature set.
 function rand(::Type{FeatureSet{L, N, F}},
               sample_count::Integer = 10,
               feature_count::Integer = 10;
-              label_count::Integer = sample_count ÷ 5
+              label_count::Integer = sample_count ÷ 5,
+              center = i -> ((i-1) % label_count + 1) / label_count,
+              place = j -> 7j / feature_count
              )::FeatureSet{L, N, F} where {L, N <: Integer, F <: AbstractFloat}
     (d, r) = divrem(sample_count, label_count)
     @assert iszero(r)
 
     labels::Vector{L} = L.(repeat(1:label_count, d))
     names::Vector{N} = N.(collect(1:feature_count))
+
+    # TODO distribution = XXX()
     features::Matrix{F} =
-        [randn() + (j * 7.0 / feature_count) * ((i-1) % label_count + 1) / label_count
+    [randn() + place(j) * center(i)
          for i in 1:sample_count, j in 1:feature_count]
 
     return FeatureSet(labels, names, features)

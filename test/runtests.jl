@@ -42,9 +42,9 @@ seed!(1)
                                   33 32;
                                   31 34;
                                   39 30]),
-        feature_subset = feature_set[["feature1"]]
-
+        feature_subset = feature_set[:, ["feature1"]]
         @test feature_subset isa FeatureSet
+
         @test [(1, [10, 11]),
                (1, [11, 11]),
                (1, [13, 12]),
@@ -54,7 +54,7 @@ seed!(1)
                (3, [33, 32]),
                (3, [31, 34]),
                (3, [39, 30])
-              ] == map(identity, feature_set)
+              ] == collect(eachrow(feature_set))
 
         @test [(1, [10]),
                (1, [11]),
@@ -65,7 +65,42 @@ seed!(1)
                (3, [33]),
                (3, [31]),
                (3, [39])
-              ] == map(identity, feature_subset)
+              ] == collect(eachrow(feature_subset))
+    end
+
+    let feature_set = FeatureSet([1, 1, 1, 2, 2, 2, 3, 3, 3],
+                                 ["feature1", "feature2", "feature3", "feature4"],
+                                 [10 11 12 13;
+                                  11 11 12 13;
+                                  13 12 11 12;
+                                  21 20 23 24;
+                                  22 21 22 23;
+                                  21 22 22 22;
+                                  33 32 31 32;
+                                  31 34 31 34;
+                                  39 30 30 32]),
+
+        feature_subset = feature_set[:, ["feature2", "feature3", "feature4"]]
+        @test feature_subset isa FeatureSet
+        @test [(1, [11, 12, 13]),
+               (1, [11, 12, 13]),
+               (1, [12, 11, 12]),
+               (2, [20, 23, 24]),
+               (2, [21, 22, 23]),
+               (2, [22, 22, 22]),
+               (3, [32, 31, 32]),
+               (3, [34, 31, 34]),
+               (3, [30, 30, 32])
+              ] == collect(eachrow(feature_subset))
+
+        feature_subset2 = feature_subset[1:5, ["feature2", "feature3"]]
+        @test feature_subset2 isa FeatureSet
+        @test [(1, [11, 12]),
+               (1, [11, 12]),
+               (1, [12, 11]),
+               (2, [20, 23]),
+               (2, [21, 22])
+              ] == collect(eachrow(feature_subset2))
     end
 
     let feature_set = rand(FeatureSet, 80, 30)

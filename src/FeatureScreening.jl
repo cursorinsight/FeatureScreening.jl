@@ -61,9 +61,11 @@ function screen(feature_set::FeatureSet;
                 before::Function            = skip,
                 after::Function             = skip
                )::FeatureSet
-    iterator::Enumerate = enumerate(partition(feature_set, step_size; rest = true))
+    parts = partition(names(feature_set), step_size; rest = true)
+    init = feature_set[:, starters]
 
-    return foldl(iterator; init = feature_set[starters]) do selected, (i, new)
+    return foldl(enumerate(parts); init) do selected, (i, part)
+        new = feature_set[:, part]
         @info "Turn #$(i)"
 
         # Before the computation
@@ -93,24 +95,18 @@ function select_features(features::FeatureSet{L, N, F};
     importances::Vector{Pair{N, <: Real}} =
         feature_importance(features; config = config)
 
-    return features[importants(importances; count = count)]
-end
-
-function accuracy(features::FeatureSet; config::NamedTuple = (;))::Float64
-    accuracies::Vector{Float64} =
-        nfoldCV_forest(features; config, verbose = false)
-    accuracy::Float64 = mean(accuracies)
-    @info "$(length(accuracies))-fold CV" accuracies mean_accuracy=accuracy
-    return accuracy
+    return features[:, importants(importances; count = count)]
 end
 
 function accuracies(features::FeatureSet;
                     step = ExpStep(2),
                     config::NamedTuple = (;)
                    )::Vector{Pair{Int, Float64}}
-    fns::Vector = names(features)
-    return [n => accuracy(features[fns[1:n]]; config = config)
-            for n in 1:step:length(fns)]
+    feature_names::Vector = names(features)
+    return [n => nfoldCV_forest(features[:, feature_names[1:n]];
+                                config,
+                                verbose = false) |> mean
+            for n in 1:step:length(feature_names)]
 end
 
 # TODO
