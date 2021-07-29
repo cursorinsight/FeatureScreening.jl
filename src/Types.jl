@@ -158,7 +158,7 @@ function merge(a::FeatureSet, b::FeatureSet)::FeatureSet
     # TODO
     @assert features(a) isa SubArray
     @assert features(b) isa SubArray
-    @assert features(a).parent == features(b).parent
+    @assert features(a).parent === features(b).parent
 
     unique_names::Vector = [names(a); names(b)] |> unique!
     unique_features::AbstractMatrix =
