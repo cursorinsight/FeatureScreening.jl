@@ -258,13 +258,27 @@ end
 
 function save(feature_set::FeatureSet, filename::AbstractString)::Nothing
     h5open(filename, "w") do fid
-        fs = features(feature_set)
-        fid["features"] = (fs isa Matrix) ? fs : copy(fs)
-        fid["labels"] = labels(feature_set)
-        fid["names"] = collect(names(feature_set))
+        fid["features"] = features(feature_set) |> to_hdf5
+        fid["labels"] = labels(feature_set) |> to_hdf5
+        fid["names"] = names(feature_set) |> to_hdf5
     end
 
     return nothing
+end
+
+"""
+CAUTION! This function will create a new array if the input was an array view.
+"""
+function to_hdf5(x::SubArray)
+    return copy(x)
+end
+
+function to_hdf5(x::AbstractRange)
+    return collect(x)
+end
+
+function to_hdf5(x::Any)
+    return x
 end
 
 function load(filename::AbstractString)::FeatureSet
