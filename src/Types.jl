@@ -166,6 +166,9 @@ function merge(xs::FeatureSet...)::FeatureSet
     return reduce(merge, xs)
 end
 
+# TODO refactor feature generation by:
+# - designing the generator function
+# - making to be able to set up custom distribution to produce values
 """
 This function generates only per-label-BALANCED feature set.
 """
@@ -173,18 +176,18 @@ function rand(::Type{FeatureSet{L, N, F}},
               sample_count::Integer = 10,
               feature_count::Integer = 10;
               label_count::Integer = sample_count ÷ 5,
-              center = i -> ((i-1) % label_count + 1) / label_count,
-              place = j -> 7j / feature_count
+              center::Function = i -> ((i-1) / label_count + 1),
+              place::Function = j -> 7j / feature_count,
+              random::Function = (i, j) -> randn()
              )::FeatureSet{L, N, F} where {L, N <: Integer, F <: AbstractFloat}
     (d, r) = divrem(sample_count, label_count)
     @assert iszero(r)
 
-    labels::Vector{L} = L.(repeat(1:label_count, d))
+    labels::Vector{L} = L.(repeat(1:label_count, inner = d))
     names::Vector{N} = N.(collect(1:feature_count))
 
-    # TODO distribution = XXX()
     features::Matrix{F} =
-    [randn() + place(j) * center(i)
+        [center(i) * place(j) + random(i, j)
          for i in 1:sample_count, j in 1:feature_count]
 
     return FeatureSet(labels, names, features)
@@ -193,12 +196,12 @@ end
 function rand(::Type{FeatureSet},
               sample_count::Integer = 10,
               feature_count::Integer = 10;
-              label_count::Integer = floor(Int, sample_count / 5)
+              kwargs...
              )::FeatureSet
     return rand(FeatureSet{Int, Int, Float64},
                 sample_count,
                 feature_count;
-                label_count)
+                kwargs...)
 end
 
 ###-----------------------------------------------------------------------------
