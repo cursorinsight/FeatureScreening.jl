@@ -22,7 +22,7 @@ export PearsonCorrelation
 ###-----------------------------------------------------------------------------
 
 # Basic API
-import Base: show, getindex, ndims, size, length, iterate, merge, rand
+import Base: show, getindex, ndims, size, length, iterate, merge, rand, ==
 import Base: eachrow, eachcol, iterate
 import FeatureScreening.Utilities: partition
 import Base: names
@@ -99,14 +99,26 @@ end
 
 function getindex(feature_set::FeatureSet{L, N, F},
                   i,
-                  names,
+                  j,
                  )::FeatureSet{L, N, F} where {L, N, F}
-    j::Vector{Int} = [feature_set.name_idxs[name] for name in names]
+    j = _name_idxs(feature_set, j)
 
     _labels::AbstractVector{L} = @view labels(feature_set)[i]
-    _names::AbstractVector{N} = convert(AbstractVector{N}, names)
+    _names::AbstractVector{N} = @view names(feature_set)[j]
     _features::AbstractMatrix{F} = @view features(feature_set)[i, j]
     return FeatureSet(_labels, _names, _features)
+end
+
+function _name_idxs(feature_set::FeatureSet, ::Colon)
+    return map(names(feature_set)) do name
+        return feature_set.name_idxs[name]
+    end
+end
+
+function _name_idxs(feature_set::FeatureSet, names)
+    return map(names) do name
+        return feature_set.name_idxs[name]
+    end
 end
 
 function ndims(feature_set::FeatureSet)::Int
@@ -141,6 +153,12 @@ end
 
 function iterate(feature_set::FeatureSet, state)
     return iterate(eachrow(feature_set), state)
+end
+
+function ==(a::FeatureSet, b::FeatureSet)
+    return (a.features == b.features
+            && a.labels == b.labels
+            && a.names == b.names)
 end
 
 # TODO revamp, design

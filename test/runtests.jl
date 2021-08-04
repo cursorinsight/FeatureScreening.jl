@@ -10,7 +10,7 @@
 
 using Test
 
-using FeatureScreening: FeatureSet, names
+using FeatureScreening.Types: FeatureSet, labels, names, features
 
 # Utility tests
 using FeatureScreening.Utilities: partition, ExpStep, Size
@@ -31,42 +31,6 @@ seed!(1)
 ###=============================================================================
 
 @testset "`FeatureSet` function" begin
-    let feature_set = FeatureSet([1, 1, 1, 2, 2, 2, 3, 3, 3],
-                                 ["feature1", "feature2"],
-                                 [10 11;
-                                  11 11;
-                                  13 12;
-                                  21 20;
-                                  22 21;
-                                  21 22;
-                                  33 32;
-                                  31 34;
-                                  39 30]),
-        feature_subset = feature_set[:, ["feature1"]]
-        @test feature_subset isa FeatureSet
-
-        @test [(1, [10, 11]),
-               (1, [11, 11]),
-               (1, [13, 12]),
-               (2, [21, 20]),
-               (2, [22, 21]),
-               (2, [21, 22]),
-               (3, [33, 32]),
-               (3, [31, 34]),
-               (3, [39, 30])
-              ] == collect(eachrow(feature_set))
-
-        @test [(1, [10]),
-               (1, [11]),
-               (1, [13]),
-               (2, [21]),
-               (2, [22]),
-               (2, [21]),
-               (3, [33]),
-               (3, [31]),
-               (3, [39])
-              ] == collect(eachrow(feature_subset))
-    end
 
     let feature_set = FeatureSet([1, 1, 1, 2, 2, 2, 3, 3, 3],
                                  ["feature1", "feature2", "feature3", "feature4"],
@@ -82,6 +46,17 @@ seed!(1)
 
         feature_subset = feature_set[:, ["feature2", "feature3", "feature4"]]
         @test feature_subset isa FeatureSet
+        @test labels(feature_subset) == [1, 1, 1, 2, 2, 2, 3, 3, 3]
+        @test names(feature_subset) == ["feature2", "feature3", "feature4"]
+        @test features(feature_subset) == [11 12 13;
+                                           11 12 13;
+                                           12 11 12;
+                                           20 23 24;
+                                           21 22 23;
+                                           22 22 22;
+                                           32 31 32;
+                                           34 31 34;
+                                           30 30 32]
         @test [(1, [11, 12, 13]),
                (1, [11, 12, 13]),
                (1, [12, 11, 12]),
@@ -95,12 +70,23 @@ seed!(1)
 
         feature_subset2 = feature_subset[1:5, ["feature2", "feature3"]]
         @test feature_subset2 isa FeatureSet
+        @test labels(feature_subset2) == [1, 1, 1, 2, 2]
+        @test names(feature_subset2) == ["feature2", "feature3"]
+        @test features(feature_subset2) == [11 12;
+                                           11 12;
+                                           12 11;
+                                           20 23;
+                                           21 22]
         @test [(1, [11, 12]),
                (1, [11, 12]),
                (1, [12, 11]),
                (2, [20, 23]),
                (2, [21, 22])
               ] == collect(eachrow(feature_subset2))
+
+        feature_subset3 = feature_subset[:, :]
+        @test feature_subset3 isa FeatureSet
+        @test feature_subset == feature_subset3
     end
 
     let feature_set = rand(FeatureSet, 80, 30)
