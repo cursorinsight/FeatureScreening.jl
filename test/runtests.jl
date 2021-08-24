@@ -16,7 +16,7 @@ using FeatureScreening.Types: FeatureSet, labels, names, features
 using FeatureScreening.Utilities: partition, ExpStep, Size
 
 # API tests
-using FeatureScreening: screen, accuracies
+using FeatureScreening: screen, accuracy
 
 using Random: seed!, shuffle
 
@@ -203,7 +203,7 @@ end
                           reduced_size = REDUCED_SIZE,
                           step_size    = STEP_SIZE,
                           config       = config_screen,
-                          after        = accuracies(config = config_test))
+                          after        = accuracy(config = config_test))
 
         @test selected isa FeatureSet{Symbol, String, Float64}
         @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)
@@ -216,7 +216,7 @@ end
                           reduced_size = REDUCED_SIZE,
                           step_size    = STEP_SIZE,
                           config       = config_screen,
-                          after        = accuracies(config = config_test))
+                          after        = accuracy(config = config_test))
 
         @test selected isa FeatureSet{Symbol, Int, Float64}
         @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)

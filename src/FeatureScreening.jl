@@ -98,21 +98,17 @@ function select_features(features::FeatureSet{L, N, F};
     return features[:, importants(importances; count = count)]
 end
 
-function accuracies(features::FeatureSet;
-                    step = ExpStep(2),
-                    config::NamedTuple = (;)
-                   )::Vector{Pair{Int, Float64}}
-    feature_names::Vector = names(features)
-    return [n => nfoldCV_forest(features[:, feature_names[1:n]];
-                                config,
-                                verbose = false) |> mean
-            for n in 1:step:length(feature_names)]
+function accuracy(features::FeatureSet;
+                  config::NamedTuple = (;),
+                  verbose = false
+                 )::Vector{Float64}
+    return nfoldCV_forest(features; config, verbose)
 end
 
 # TODO
-function accuracies(; kwargs...)::Function
+function accuracy(; kwargs...)::Function
     return function (features)
-        return accuracies(features; kwargs...)
+        return accuracy(features; kwargs...)
     end
 end
 

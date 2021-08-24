@@ -22,7 +22,7 @@ export PearsonCorrelation
 ###-----------------------------------------------------------------------------
 
 # Basic API
-import Base: show, getindex, ndims, size, length, iterate, merge, rand, ==
+import Base: show, getindex, ndims, size, length, iterate, merge, rand, ==, hash
 import Base: eachrow, eachcol, iterate
 import FeatureScreening.Utilities: partition
 import Base: names
@@ -156,9 +156,14 @@ function iterate(feature_set::FeatureSet, state)
 end
 
 function ==(a::FeatureSet, b::FeatureSet)
-    return (a.features == b.features
-            && a.labels == b.labels
-            && a.names == b.names)
+    return hash(a) == hash(b)
+end
+
+function hash(feature_set::FeatureSet, h::UInt64)::UInt64
+    parts = [labels(feature_set), names(feature_set), features(feature_set)]
+    return reduce(parts; init = h) do h, part
+        return hash(part, h)
+    end
 end
 
 # TODO revamp, design
