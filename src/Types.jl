@@ -21,6 +21,8 @@ export PearsonCorrelation
 ### FeatureSet imports
 ###-----------------------------------------------------------------------------
 
+using UUIDs: UUID, uuid4
+
 # Basic API
 import Base: show, getindex, ndims, size, length, iterate, merge, rand, ==, hash
 import Base: eachrow, eachcol, iterate
@@ -63,6 +65,8 @@ function features end
     - `F` is the type of the feature values, typically some numeric type
 """
 struct FeatureSet{L, N, F}
+    id::UUID
+
     labels::AbstractVector{L}
     names::AbstractVector{N}
     features::AbstractMatrix{F}
@@ -71,16 +75,31 @@ struct FeatureSet{L, N, F}
 
     function FeatureSet(labels::AbstractVector{L},
                         names::AbstractVector{N},
-                        features::AbstractMatrix{F}
+                        features::AbstractMatrix{F};
+                       ) where {L, N, F}
+        return FeatureSet(uuid4(), labels, names, features)
+    end
+
+    function FeatureSet(id::UUID,
+                        labels::AbstractVector{L},
+                        names::AbstractVector{N},
+                        features::AbstractMatrix{F};
                        ) where {L, N, F}
         @assert (length(labels), length(names)) == size(features)
 
         name_idxs::Dict{N, Int} =
             Dict(name => i for (i, name) in enumerate(names))
-        return new{L, N, F}(labels, names, features, name_idxs)
+        return new{L, N, F}(id, labels, names, features, name_idxs)
     end
 
     function FeatureSet(X::AbstractMatrix{F},
+                        y::AbstractVector{L}
+                       ) where {L, F}
+        return FeatureSet(uuid4(), X, y)
+    end
+
+    function FeatureSet(id::UUID,
+                        X::AbstractMatrix{F},
                         y::AbstractVector{L}
                        ) where {L, F}
         return FeatureSet(y, 1:size(X, 2), X)
