@@ -32,7 +32,7 @@ using FeatureScreening.Types: FeatureSet
 using FeatureScreening.Types: names, load, save
 
 # API dependencies
-using Base.Iterators: Enumerate
+using ProgressMeter: @showprogress
 using FeatureScreening.Utilities: nfoldCV_forest
 using Statistics: mean
 
@@ -62,16 +62,13 @@ function screen(feature_set::FeatureSet;
                 after::Function             = skip
                )::FeatureSet
     parts = partition(names(feature_set), step_size; rest = true)
-    init = feature_set[:, starters]
+    selected::FeatureSet = feature_set[:, starters]
 
-    return foldl(enumerate(parts); init) do selected, (i, part)
-        new = feature_set[:, part]
-        @info "Turn #$(i)"
+    @showprogress "Screen" for (i, part) in enumerate(parts)
+        new::FeatureSet = feature_set[:, part]
 
         # Before the computation
         before(selected, new)
-
-        @debug "Select" from = features plus = new
 
         to_be_selected::FeatureSet = merge(selected, new)
 
@@ -81,11 +78,9 @@ function screen(feature_set::FeatureSet;
 
         # After the computation
         after(selected)
-
-        @debug "Selected features" selected = names(selected)
-
-        return selected
     end
+
+    return selected
 end
 
 function select_features(features::FeatureSet{L, N, F};

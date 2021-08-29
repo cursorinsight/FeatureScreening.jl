@@ -202,8 +202,7 @@ end
         selected = screen(feature_set;
                           reduced_size = REDUCED_SIZE,
                           step_size    = STEP_SIZE,
-                          config       = config_screen,
-                          after        = accuracy(config = config_test))
+                          config       = config_screen)
 
         @test selected isa FeatureSet{Symbol, String, Float64}
         @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)
