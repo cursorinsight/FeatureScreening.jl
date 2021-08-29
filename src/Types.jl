@@ -25,7 +25,7 @@ using UUIDs: UUID, uuid4
 
 # Basic API
 import Base: show, getindex, ndims, size, length, iterate, merge, rand, ==, hash
-import Base: eachrow, eachcol, iterate
+import Base: eachrow, eachcol, iterate, axes
 import FeatureScreening.Utilities: partition
 import Base: names
 
@@ -142,6 +142,19 @@ end
 
 function ndims(feature_set::FeatureSet)::Int
     return ndims(features(feature_set))
+end
+
+function axes(feature_set::FeatureSet)::Tuple
+    return axes.(Ref(feature_set), size(feature_set))
+end
+
+function axes(feature_set::FeatureSet, dim::Int)
+    @assert dim in [1, 2]
+    if dim == 1
+        return 1:size(feature_set, 1)
+    elseif dim == 2
+        return names(feature_set)
+    end
 end
 
 function size(feature_set::FeatureSet)::Tuple{Int, Int}

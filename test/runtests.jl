@@ -87,6 +87,10 @@ seed!(1)
         feature_subset3 = feature_subset[:, :]
         @test feature_subset3 isa FeatureSet
         @test feature_subset == feature_subset3
+
+        feature_subset4 = feature_subset3[1:end, :]
+        @test feature_subset4 isa FeatureSet
+        @test feature_subset3 == feature_subset4
     end
 
     let feature_set = rand(FeatureSet, 80, 30)
