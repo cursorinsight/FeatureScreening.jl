@@ -323,8 +323,12 @@ function to_hdf5(x::Any)
     return x
 end
 
-function load(filename::AbstractString)::FeatureSet
-    return h5open(filename) do fid
+function load(path::AbstractString)::FeatureSet
+    return load(FeatureSet, path)
+end
+
+function load(::Type{FeatureSet}, path::AbstractString)::FeatureSet
+    return h5open(path) do fid
         features = read(fid, "features")
         labels = read(fid, "labels")
         names = read(fid, "names")
