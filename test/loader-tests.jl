@@ -21,7 +21,7 @@ using FeatureScreening.Types: save, load
     filename = tempname() * ".hdf5"
 
     let feature_set = rand(FeatureSet, 50, 30; label_count = 10)
-        save(feature_set, filename)
+        save(filename, feature_set)
         @test isfile(filename)
     end
 
@@ -47,7 +47,7 @@ end
     let feature_set = rand(FeatureSet, 50, 30; label_count = 10),
         feature_subset = feature_set[:, 1:5]
 
-        save(feature_subset, filename)
+        save(filename, feature_subset)
         @test isfile(filename)
     end
 

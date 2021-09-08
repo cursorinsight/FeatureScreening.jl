@@ -311,7 +311,7 @@ end
 ### I/O: save, load
 ###-----------------------------------------------------------------------------
 
-function save(feature_set::FeatureSet, filename::AbstractString)::Nothing
+function save(filename::AbstractString, feature_set::FeatureSet)::Nothing
     h5open(filename, "w") do fid
         fid["features"] = features(feature_set) |> to_hdf5
         fid["labels"] = labels(feature_set) |> to_hdf5
