@@ -8,13 +8,20 @@ using DecisionTree: Ensemble as RandomForest
 
 using DecisionTree: build_forest, nfoldCV_forest
 
+using UUIDs: UUID, uuid5
+
+using HDF5: File as HDF5File
+import Base: get, get!
+using Dates: DateTime
+using HDF5: H5T_TIME as HDF5Time, H5S_SCALAR as HDF5Scalar
+import HDF5: datatype, dataspace
+
 ###=============================================================================
 ### API
 ###=============================================================================
 
 const Maybe{T} = Union{Nothing, T}
 
-# TODO be careful with the name collision with `IterTools.partition`
 function partition(xs::AbstractVector{X},
                    n::Int;
                    rest::Bool = false
@@ -88,11 +95,11 @@ const DEFAULT_BUILD_FOREST_CONFIG =
      min_samples_split      = 2,
      min_purity_increase    = 0.0)
 
-function _build_forest(labels::AbstractVector{L},
-                       features::AbstractMatrix{F};
-                       config::NamedTuple = (;),
-                       kwargs...
-                      )::RandomForest{F, L} where {L, F}
+function __build_forest(labels::AbstractVector{L},
+                        features::AbstractMatrix{F};
+                        config::NamedTuple = (;),
+                        kwargs...
+                       )::RandomForest{F, L} where {L, F}
     config::NamedTuple = (; DEFAULT_BUILD_FOREST_CONFIG..., config...)
     return build_forest(labels,
                         features,
@@ -116,10 +123,10 @@ const DEFAULT_NFOLDCV_FOREST_CONFIG =
      min_samples_split      = 2,
      min_purity_increase    = 0.0)
 
-function _nfoldCV_forest(labels::AbstractVector,
-                         features::AbstractMatrix;
-                         config::NamedTuple = (;),
-                         kwargs...)
+function __nfoldCV_forest(labels::AbstractVector,
+                          features::AbstractMatrix;
+                          config::NamedTuple = (;),
+                          kwargs...)
     config::NamedTuple = (; DEFAULT_NFOLDCV_FOREST_CONFIG..., config...)
     return nfoldCV_forest(labels,
                           features,
@@ -132,6 +139,38 @@ function _nfoldCV_forest(labels::AbstractVector,
                           config.min_samples_split,
                           config.min_purity_increase;
                           kwargs...)
+end
+
+function save end
+
+function save(; kwargs...)::Function
+    return x -> save(x; kwargs...)
+end
+
+function load end
+
+function id(nt::C)::UUID where {C <: NamedTuple}
+    return uuid5(UUID(hash(nt)), "config")
+end
+
+function created_at end
+
+const FILENAME_DATETIME_FORMAT = "YYYYmmdd-HHMMSS"
+
+function get(file::HDF5File, key::AbstractString, default)
+    return if haskey(file, key)
+        read(file, key)
+    else
+        default
+    end
+end
+
+function get!(file::HDF5File, key::AbstractString, default)
+    return if haskey(file, key)
+        read(file, key)
+    else
+        file[key] = default
+    end
 end
 
 end # module

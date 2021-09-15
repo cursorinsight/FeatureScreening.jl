@@ -53,16 +53,15 @@ function screen(feature_set...; kwargs...)
     return screen(FeatureSet(feature_set...); kwargs...)
 end
 
-function screen(feature_set::FeatureSet;
+function screen(feature_set::FeatureSet{L, N, F};
                 reduced_size::Integer       = size(feature_set, 2) ÷ 5,
                 step_size::Integer          = size(feature_set, 2) ÷ 10,
-                starters::AbstractVector    = [],
                 config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
                 before::Function            = skip,
                 after::Function             = skip
-               )::FeatureSet
+               )::FeatureSet{L, N, F} where {L, N, F}
     parts = partition(names(feature_set), step_size; rest = true)
-    selected::FeatureSet = feature_set[:, starters]
+    selected::FeatureSet = feature_set[:, N[]]
 
     @showprogress "Screen" for (i, part) in enumerate(parts)
         new::FeatureSet = feature_set[:, part]

@@ -7,51 +7,45 @@
 module Types
 
 ###=============================================================================
-### Exports
-###=============================================================================
-
-export FeatureSet, labels, names, features
-export PearsonCorrelation
-
-###=============================================================================
 ### Imports
 ###=============================================================================
 
 ###-----------------------------------------------------------------------------
-### FeatureSet imports
+### Feature set
 ###-----------------------------------------------------------------------------
 
+### Struct
+using Base: @kwdef
 using UUIDs: UUID, uuid4
+using Dates: DateTime, now, UTC
 
-# Basic API
-import Base: show, getindex, ndims, size, length, iterate, merge, rand, ==, hash
-import Base: eachrow, eachcol, iterate, axes
-import FeatureScreening.Utilities: partition
+### Getters
+import FeatureScreening.Utilities: id
 import Base: names
 
-# Research API
+### Base API
+import Base: show, ==, hash, getindex
+
+## Size API
+import Base: ndims, axes, size, length
+
+## Iterable API
+import Base: iterate, eachrow, eachcol
+
+### Research API
 using DecisionTree: Ensemble as RandomForest
 import DecisionTree: build_forest, nfoldCV_forest
-using FeatureScreening.Utilities: _build_forest, _nfoldCV_forest
+using FeatureScreening.Utilities: __build_forest, __nfoldCV_forest
 import FeatureScreening: feature_importance
 
-# File API
-using HDF5: h5open
+### File API
+import FeatureScreening.Utilities: save, load, id, created_at
+using FeatureScreening.Utilities: FILENAME_DATETIME_FORMAT
+using HDF5: h5open, File as HDF5File
 
-###-----------------------------------------------------------------------------
-### PearsonCorrelation imports
-###-----------------------------------------------------------------------------
-
-using IterTools: subsets
-using Statistics: cor
-
-###=============================================================================
-### Feature set data API
-###=============================================================================
-
-function labels end
-function names end
-function features end
+### Others
+import Base: merge, rand
+import FeatureScreening.Utilities: partition
 
 ###=============================================================================
 ### Feature set
@@ -64,46 +58,60 @@ function features end
     - `N` is the type of the feature names, by default `Int` as a vector index
     - `F` is the type of the feature values, typically some numeric type
 """
-struct FeatureSet{L, N, F}
-    id::UUID
+@kwdef struct FeatureSet{L, N, F}
+    id::UUID = uuid4()
+    created_at::DateTime = now(UTC)
 
     labels::AbstractVector{L}
     names::AbstractVector{N}
     features::AbstractMatrix{F}
 
     name_idxs::Dict{N, Int}
+end
 
-    function FeatureSet(labels::AbstractVector{L},
-                        names::AbstractVector{N},
-                        features::AbstractMatrix{F};
-                       ) where {L, N, F}
-        return FeatureSet(uuid4(), labels, names, features)
-    end
+function FeatureSet(labels::AbstractVector{L},
+                    names::AbstractVector{N},
+                    features::AbstractMatrix{F};
+                    kwargs...
+                   )::FeatureSet{L, N, F} where {L, N, F}
+    @assert (length(labels), length(names)) == size(features)
 
-    function FeatureSet(id::UUID,
-                        labels::AbstractVector{L},
-                        names::AbstractVector{N},
-                        features::AbstractMatrix{F};
-                       ) where {L, N, F}
-        @assert (length(labels), length(names)) == size(features)
+    name_idxs::Dict{N, Int} = Dict(name => i for (i, name) in enumerate(names))
+    return FeatureSet{L, N, F}(; labels, names, features, name_idxs, kwargs...)
+end
 
-        name_idxs::Dict{N, Int} =
-            Dict(name => i for (i, name) in enumerate(names))
-        return new{L, N, F}(id, labels, names, features, name_idxs)
-    end
+function FeatureSet(X::AbstractMatrix{F},
+                    y::AbstractVector{L};
+                    kwargs...
+                   )::FeatureSet{L, Int, F} where {L, F}
+    return FeatureSet(y, 1:size(X, 2), X; kwargs...)
+end
 
-    function FeatureSet(X::AbstractMatrix{F},
-                        y::AbstractVector{L}
-                       ) where {L, F}
-        return FeatureSet(uuid4(), X, y)
-    end
+###-----------------------------------------------------------------------------
+### Getters
+###-----------------------------------------------------------------------------
 
-    function FeatureSet(id::UUID,
-                        X::AbstractMatrix{F},
-                        y::AbstractVector{L}
-                       ) where {L, F}
-        return FeatureSet(y, 1:size(X, 2), X)
-    end
+function id(feature_set::FeatureSet)::UUID
+    return feature_set.id
+end
+
+function created_at(feature_set::FeatureSet)::DateTime
+    return feature_set.created_at
+end
+
+function labels(feature_set::FeatureSet{L}
+               )::AbstractVector{L} where {L}
+    return feature_set.labels
+end
+
+function names(feature_set::FeatureSet{L, N}
+              )::AbstractVector{N} where {L, N}
+    return feature_set.names
+end
+
+function features(feature_set::FeatureSet{L, N, F}
+                 )::AbstractMatrix{F} where {L, N, F}
+    return feature_set.features
 end
 
 ###-----------------------------------------------------------------------------
@@ -116,29 +124,44 @@ function show(io::IO, features::FeatureSet{L, N, F})::Nothing where {L, N, F}
     return nothing
 end
 
+function ==(a::FeatureSet, b::FeatureSet)
+    return hash(a) == hash(b)
+end
+
+function hash(feature_set::FeatureSet, h::UInt64)::UInt64
+    parts = [labels(feature_set), names(feature_set), features(feature_set)]
+    return reduce(parts; init = h) do h, part
+        return hash(part, h)
+    end
+end
+
 function getindex(feature_set::FeatureSet{L, N, F},
                   i,
                   j,
                  )::FeatureSet{L, N, F} where {L, N, F}
-    j = _name_idxs(feature_set, j)
+    j = __name_idxs(feature_set, j)
 
-    _labels::AbstractVector{L} = @view labels(feature_set)[i]
-    _names::AbstractVector{N} = @view names(feature_set)[j]
-    _features::AbstractMatrix{F} = @view features(feature_set)[i, j]
-    return FeatureSet(_labels, _names, _features)
+    __labels::AbstractVector{L} = @view labels(feature_set)[i]
+    __names::AbstractVector{N} = @view names(feature_set)[j]
+    __features::AbstractMatrix{F} = @view features(feature_set)[i, j]
+    return FeatureSet(__labels, __names, __features)
 end
 
-function _name_idxs(feature_set::FeatureSet, ::Colon)
-    return map(names(feature_set)) do name
+function __name_idxs(feature_set::FeatureSet, ::Colon)::Colon
+    return (:)
+end
+
+function __name_idxs(feature_set::FeatureSet{_L, N},
+                     names::AbstractVector{N}
+                    )::Vector{Int} where {_L, N}
+    return map(names) do name::N
         return feature_set.name_idxs[name]
     end
 end
 
-function _name_idxs(feature_set::FeatureSet, names)
-    return map(names) do name
-        return feature_set.name_idxs[name]
-    end
-end
+##------------------------------------------------------------------------------
+## Size API
+##------------------------------------------------------------------------------
 
 function ndims(feature_set::FeatureSet)::Int
     return ndims(features(feature_set))
@@ -169,6 +192,18 @@ function length(feature_set::FeatureSet)::Int
     return size(features(feature_set), 1)
 end
 
+##------------------------------------------------------------------------------
+## Iterable API
+##------------------------------------------------------------------------------
+
+function iterate(feature_set::FeatureSet)
+    return iterate(eachrow(feature_set))
+end
+
+function iterate(feature_set::FeatureSet, state)
+    return iterate(eachrow(feature_set), state)
+end
+
 function eachrow(feature_set::FeatureSet)
     return zip(labels(feature_set),
                eachrow(features(feature_set)))
@@ -179,24 +214,132 @@ function eachcol(feature_set::FeatureSet)
                eachcol(features(feature_set)))
 end
 
-function iterate(feature_set::FeatureSet)
-    return iterate(eachrow(feature_set))
+###-----------------------------------------------------------------------------
+### Research API
+###-----------------------------------------------------------------------------
+
+function build_forest(feature_set::FeatureSet{L, N, F};
+                      config = (;)
+                     ) where {L, N, F}
+    return __build_forest(labels(feature_set), features(feature_set); config)
 end
 
-function iterate(feature_set::FeatureSet, state)
-    return iterate(eachrow(feature_set), state)
+function nfoldCV_forest(feature_set::FeatureSet;
+                        config = (;),
+                        verbose = false)
+    return __nfoldCV_forest(labels(feature_set),
+                            features(feature_set);
+                            config,
+                            verbose)
 end
 
-function ==(a::FeatureSet, b::FeatureSet)
-    return hash(a) == hash(b)
+function feature_importance(feature_set::FeatureSet{L, N};
+                            config = (;)
+                           )::Vector{Pair{N, Int}} where {L, N}
+    forest::RandomForest = build_forest(feature_set; config)
+    importances::Vector{Pair{Int, Int}} = feature_importance(forest)
+
+    return [names(feature_set)[idx] => importance
+            for (idx, importance) in importances]
 end
 
-function hash(feature_set::FeatureSet, h::UInt64)::UInt64
-    parts = [labels(feature_set), names(feature_set), features(feature_set)]
-    return reduce(parts; init = h) do h, part
-        return hash(part, h)
+###-----------------------------------------------------------------------------
+### File API
+###-----------------------------------------------------------------------------
+
+##------------------------------------------------------------------------------
+## Save, load
+##------------------------------------------------------------------------------
+
+function save(feature_set::FeatureSet; directory = ".")::Nothing
+    path::String = joinpath(directory, filename(feature_set))
+    save(path, feature_set)
+    return nothing
+end
+
+function save(filename::AbstractString, feature_set::FeatureSet)::Nothing
+    h5open(filename, "w") do file
+        file["id"] = id(feature_set) |> to_hdf5
+        file["created_at"] = created_at(feature_set) |> to_hdf5
+        file["features"] = features(feature_set) |> to_hdf5
+        file["labels"] = labels(feature_set) |> to_hdf5
+        file["names"] = names(feature_set) |> to_hdf5
+    end
+
+    return nothing
+end
+
+function load(::Type{FeatureSet}, path::AbstractString)::FeatureSet
+    return h5open(path, "r") do file
+        @assert isvalid(FeatureSet, file)
+
+        id = read(file, "id") |> UUID
+        created_at = read(file, "created_at") |> DateTime
+        features = read(file, "features")
+        labels = read(file, "labels")
+        names = read(file, "names")
+        return FeatureSet(labels, names, features; id, created_at)
     end
 end
+
+##------------------------------------------------------------------------------
+## Miscs
+##------------------------------------------------------------------------------
+
+function filename(feature_set::FeatureSet)::String
+    return "$(id(feature_set)).hdf5"
+end
+
+function isvalid(::Type{FeatureSet}, path::AbstractString)::Bool
+    return h5open(path, "r") do file
+        return isvalid(FeatureSet, file)
+    end
+end
+
+function isvalid(::Type{FeatureSet}, file::HDF5File)::Bool
+    return ["id", "created_at", "labels", "names", "features"] ⊆ keys(file)
+end
+
+# TODO remove ASAP
+function upgrade!(::Type{FeatureSet}, path::AbstractString)::Nothing
+    h5open(path, "r+") do fid
+        get!(fid, "id", uuid4() |> to_hdf5)
+        get!(fid, "created_at", now(UTC) |> to_hdf5)
+    end
+
+    return nothing
+end
+
+##------------------------------------------------------------------------------
+## Internals
+##------------------------------------------------------------------------------
+
+"""
+CAUTION! This function will create a new array if the input was an array view.
+"""
+function to_hdf5(x::SubArray{_T, _N, A})::A where {_T, _N, A}
+    return copy(x)
+end
+
+function to_hdf5(x::AbstractRange)::Vector
+    return collect(x)
+end
+
+function to_hdf5(x::UUID)::String
+    return string(x)
+end
+
+function to_hdf5(x::DateTime)::String
+    return string(x)
+end
+
+function to_hdf5(x)
+    return x
+end
+
+###-----------------------------------------------------------------------------
+### Others
+###-----------------------------------------------------------------------------
 
 # TODO revamp, design
 function merge(a::FeatureSet, b::FeatureSet)::FeatureSet
@@ -257,126 +400,6 @@ function rand(::Type{FeatureSet},
                 sample_count,
                 feature_count;
                 kwargs...)
-end
-
-###-----------------------------------------------------------------------------
-### Feature set data API
-###-----------------------------------------------------------------------------
-
-function labels(feature_set::FeatureSet{L}
-               )::AbstractVector{L} where {L}
-    return feature_set.labels
-end
-
-function names(feature_set::FeatureSet{L, N}
-              )::AbstractVector{N} where {L, N}
-    return feature_set.names
-end
-
-function features(feature_set::FeatureSet{L, N, F}
-                 )::AbstractMatrix{F} where {L, N, F}
-    return feature_set.features
-end
-
-###-----------------------------------------------------------------------------
-### Research API
-###-----------------------------------------------------------------------------
-
-function build_forest(feature_set::FeatureSet{L, N, F};
-                      config = (;)
-                     ) where {L, N, F}
-    return _build_forest(labels(feature_set), features(feature_set); config)
-end
-
-function nfoldCV_forest(feature_set::FeatureSet;
-                        config = (;),
-                        verbose = false)
-    return _nfoldCV_forest(labels(feature_set),
-                           features(feature_set);
-                           config,
-                           verbose)
-end
-
-function feature_importance(feature_set::FeatureSet{L, N};
-                            config = (;)
-                           )::Vector{Pair{N, Int}} where {L, N}
-    forest::RandomForest = build_forest(feature_set; config)
-    importances::Vector{Pair{Int, Int}} = feature_importance(forest)
-
-    return [names(feature_set)[idx] => importance
-            for (idx, importance) in importances]
-end
-
-###-----------------------------------------------------------------------------
-### I/O: save, load
-###-----------------------------------------------------------------------------
-
-function save(filename::AbstractString, feature_set::FeatureSet)::Nothing
-    h5open(filename, "w") do fid
-        fid["features"] = features(feature_set) |> to_hdf5
-        fid["labels"] = labels(feature_set) |> to_hdf5
-        fid["names"] = names(feature_set) |> to_hdf5
-    end
-
-    return nothing
-end
-
-"""
-CAUTION! This function will create a new array if the input was an array view.
-"""
-function to_hdf5(x::SubArray)
-    return copy(x)
-end
-
-function to_hdf5(x::AbstractRange)
-    return collect(x)
-end
-
-function to_hdf5(x::Any)
-    return x
-end
-
-function load(path::AbstractString)::FeatureSet
-    return load(FeatureSet, path)
-end
-
-function load(::Type{FeatureSet}, path::AbstractString)::FeatureSet
-    return h5open(path) do fid
-        features = read(fid, "features")
-        labels = read(fid, "labels")
-        names = read(fid, "names")
-        return FeatureSet(labels, names, features)
-    end
-end
-
-##==============================================================================
-## Correlation filter
-##==============================================================================
-
-struct PearsonCorrelation end
-
-function filter!(::Type{PearsonCorrelation},
-                 features::FeatureSet{L, N, F};
-                 threshold::Real = 0.95,
-                 count::Real = Inf
-                )::FeatureSet{L, N, F} where {L, N, F}
-    correlated::Vector{N} = N[]
-
-    # TODO replace enumerate with some direct indexing
-    for (a, b) in subsets(LinearIndices(names(features)), 2)
-        correlation::Float64 = cor(features[a], features[b])
-
-        #@info "Correlations" feature_a feature_b correlation threshold
-        if correlation > threshold
-            push!(correlated, b)
-        end
-
-        if length(correlated) >= count
-            break
-        end
-    end
-
-    return deleteat!(features, correlated)
 end
 
 end # module

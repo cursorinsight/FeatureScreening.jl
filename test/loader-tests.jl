@@ -9,58 +9,33 @@
 ###=============================================================================
 
 using FeatureScreening.Types: FeatureSet
-using FeatureScreening.Types: labels, names, features
+using FeatureScreening.Types: id, labels, names, features
 using FeatureScreening.Types: save, load
 
 ###=============================================================================
 ### Test sets
 ###=============================================================================
 
-@testset "Save and load feature set" begin
+const FEATURE_SETS =
+    [rand(FeatureSet, 50, 30; label_count = 10),
+     rand(FeatureSet, 50, 30; label_count = 10)[:, 1:5]]
 
-    filename = tempname() * ".hdf5"
+@testset "Save and load feature set" for feature_set in FEATURE_SETS
 
-    let feature_set = rand(FeatureSet, 50, 30; label_count = 10)
-        save(filename, feature_set)
-        @test isfile(filename)
-    end
+    mktempdir() do directory::String
 
-    let feature_set = load(filename)
+        save(feature_set; directory)
+        @test isfile("$directory/$(id(feature_set)).hdf5")
 
+        loaded::FeatureSet = load(FeatureSet, "$directory/$(id(feature_set)).hdf5")
         @test feature_set isa FeatureSet
-        @test size(feature_set) == (50, 30)
+        @test size(loaded) == size(feature_set)
 
-        for (label, features) in feature_set
+        for (label, features) in loaded
             @test label isa Int
-            @test label in 1:10
+            @test label in labels(feature_set)
             @test features isa AbstractVector{Float64}
-            @test length(features) == 30
-        end
-    end
-
-end
-
-@testset "Save and load feature subset" begin
-
-    filename = tempname() * ".hdf5"
-
-    let feature_set = rand(FeatureSet, 50, 30; label_count = 10),
-        feature_subset = feature_set[:, 1:5]
-
-        save(filename, feature_subset)
-        @test isfile(filename)
-    end
-
-    let feature_set = load(filename)
-
-        @test feature_set isa FeatureSet
-        @test size(feature_set) == (50, 5)
-
-        for (label, features) in feature_set
-            @test label isa Int
-            @test label in 1:10
-            @test features isa AbstractVector{Float64}
-            @test length(features) == 5
+            @test length(features) == size(feature_set, 2)
         end
     end
 
