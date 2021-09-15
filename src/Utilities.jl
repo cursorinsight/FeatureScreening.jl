@@ -8,6 +8,8 @@ using DecisionTree: Ensemble as RandomForest
 
 using DecisionTree: build_forest, nfoldCV_forest
 
+using UUIDs: UUID, uuid5
+
 ###=============================================================================
 ### API
 ###=============================================================================
@@ -133,5 +135,21 @@ function _nfoldCV_forest(labels::AbstractVector,
                           config.min_purity_increase;
                           kwargs...)
 end
+
+function save end
+
+function save(; kwargs...)::Function
+    return x -> save(x; kwargs...)
+end
+
+function load end
+
+function id(nt::C)::UUID where {C <: NamedTuple}
+    return uuid5(UUID(hash(nt)), "config")
+end
+
+function created_at end
+
+const FILENAME_DATETIME_FORMAT = "YYYYmmdd-HHMMSS"
 
 end # module

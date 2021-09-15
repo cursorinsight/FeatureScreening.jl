@@ -25,7 +25,7 @@ using FeatureScreening.Types: save, load
         @test isfile(filename)
     end
 
-    let feature_set = load(filename)
+    let feature_set = load(FeatureSet, filename)
 
         @test feature_set isa FeatureSet
         @test size(feature_set) == (50, 30)
@@ -51,7 +51,7 @@ end
         @test isfile(filename)
     end
 
-    let feature_set = load(filename)
+    let feature_set = load(FeatureSet, filename)
 
         @test feature_set isa FeatureSet
         @test size(feature_set) == (50, 5)

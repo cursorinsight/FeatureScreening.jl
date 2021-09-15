@@ -21,13 +21,16 @@ export PearsonCorrelation
 ### FeatureSet imports
 ###-----------------------------------------------------------------------------
 
+using Base: @kwdef
 using UUIDs: UUID, uuid4
+using Dates: DateTime, now, format
 
 # Basic API
 import Base: show, getindex, ndims, size, length, iterate, merge, rand, ==, hash
 import Base: eachrow, eachcol, iterate, axes
 import FeatureScreening.Utilities: partition
 import Base: names
+import FeatureScreening.Utilities: id
 
 # Research API
 using DecisionTree: Ensemble as RandomForest
@@ -36,6 +39,8 @@ using FeatureScreening.Utilities: _build_forest, _nfoldCV_forest
 import FeatureScreening: feature_importance
 
 # File API
+import FeatureScreening.Utilities: save, load, id, created_at
+using FeatureScreening.Utilities: FILENAME_DATETIME_FORMAT
 using HDF5: h5open
 
 ###-----------------------------------------------------------------------------
@@ -64,46 +69,33 @@ function features end
     - `N` is the type of the feature names, by default `Int` as a vector index
     - `F` is the type of the feature values, typically some numeric type
 """
-struct FeatureSet{L, N, F}
-    id::UUID
+@kwdef struct FeatureSet{L, N, F}
+    id::UUID = uuid4()
+    created_at::DateTime = now()
 
     labels::AbstractVector{L}
     names::AbstractVector{N}
     features::AbstractMatrix{F}
 
     name_idxs::Dict{N, Int}
+end
 
-    function FeatureSet(labels::AbstractVector{L},
-                        names::AbstractVector{N},
-                        features::AbstractMatrix{F};
-                       ) where {L, N, F}
-        return FeatureSet(uuid4(), labels, names, features)
-    end
+function FeatureSet(labels::AbstractVector{L},
+                    names::AbstractVector{N},
+                    features::AbstractMatrix{F};
+                    kwargs...
+                   )::FeatureSet{L, N, F} where {L, N, F}
+    @assert (length(labels), length(names)) == size(features)
 
-    function FeatureSet(id::UUID,
-                        labels::AbstractVector{L},
-                        names::AbstractVector{N},
-                        features::AbstractMatrix{F};
-                       ) where {L, N, F}
-        @assert (length(labels), length(names)) == size(features)
+    name_idxs::Dict{N, Int} = Dict(name => i for (i, name) in enumerate(names))
+    return FeatureSet{L, N, F}(; labels, names, features, name_idxs, kwargs...)
+end
 
-        name_idxs::Dict{N, Int} =
-            Dict(name => i for (i, name) in enumerate(names))
-        return new{L, N, F}(id, labels, names, features, name_idxs)
-    end
-
-    function FeatureSet(X::AbstractMatrix{F},
-                        y::AbstractVector{L}
-                       ) where {L, F}
-        return FeatureSet(uuid4(), X, y)
-    end
-
-    function FeatureSet(id::UUID,
-                        X::AbstractMatrix{F},
-                        y::AbstractVector{L}
-                       ) where {L, F}
-        return FeatureSet(y, 1:size(X, 2), X)
-    end
+function FeatureSet(X::AbstractMatrix{F},
+                    y::AbstractVector{L};
+                    kwargs...
+                   )::FeatureSet{L, Int, F} where {L, F}
+    return FeatureSet(y, 1:size(X, 2), X; kwargs...)
 end
 
 ###-----------------------------------------------------------------------------
@@ -263,6 +255,14 @@ end
 ### Feature set data API
 ###-----------------------------------------------------------------------------
 
+function id(feature_set::FeatureSet)::UUID
+    return feature_set.id
+end
+
+function created_at(feature_set::FeatureSet)::DateTime
+    return feature_set.created_at
+end
+
 function labels(feature_set::FeatureSet{L}
                )::AbstractVector{L} where {L}
     return feature_set.labels
@@ -311,6 +311,14 @@ end
 ### I/O: save, load
 ###-----------------------------------------------------------------------------
 
+function save(feature_set::FeatureSet; directory = ".")::Nothing
+    __id::String = id(feature_set) |> string
+    ts::String = format(created_at(feature_set), FILENAME_DATETIME_FORMAT)
+    path::String = joinpath(directory, "feature-set.$__id.$ts.hdf5")
+    save(path, feature_set)
+    return nothing
+end
+
 function save(filename::AbstractString, feature_set::FeatureSet)::Nothing
     h5open(filename, "w") do fid
         fid["features"] = features(feature_set) |> to_hdf5
@@ -334,10 +342,6 @@ end
 
 function to_hdf5(x::Any)
     return x
-end
-
-function load(path::AbstractString)::FeatureSet
-    return load(FeatureSet, path)
 end
 
 function load(::Type{FeatureSet}, path::AbstractString)::FeatureSet
