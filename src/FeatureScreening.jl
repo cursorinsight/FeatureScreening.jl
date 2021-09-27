@@ -32,6 +32,7 @@ using FeatureScreening.Types: FeatureSet
 using FeatureScreening.Types: names, load, save
 
 # API dependencies
+using Random: shuffle as __shuffle
 using ProgressMeter: @showprogress
 using FeatureScreening.Utilities: nfoldCV_forest
 using Statistics: mean
@@ -57,10 +58,16 @@ function screen(feature_set::FeatureSet{L, N, F};
                 reduced_size::Integer       = size(feature_set, 2) ÷ 5,
                 step_size::Integer          = size(feature_set, 2) ÷ 10,
                 config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
+                shuffle::Bool               = false,
                 before::Function            = skip,
                 after::Function             = skip
                )::FeatureSet{L, N, F} where {L, N, F}
-    parts = partition(names(feature_set), step_size; rest = true)
+    all::Vector{N} = names(feature_set)
+    if shuffle
+        __shuffle(all)
+    end
+
+    parts = partition(all, step_size; rest = true)
     selected::FeatureSet = feature_set[:, N[]]
 
     @showprogress "Screen" for (i, part) in enumerate(parts)

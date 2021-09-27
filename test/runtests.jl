@@ -18,7 +18,7 @@ using FeatureScreening.Utilities: partition, ExpStep, Size
 # API tests
 using FeatureScreening: screen, accuracy
 
-using Random: seed!, shuffle
+using Random: seed!
 
 ###=============================================================================
 ### Tests
