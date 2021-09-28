@@ -173,4 +173,108 @@ function get!(file::HDF5File, key::AbstractString, default)
     end
 end
 
+function filename end
+
+function path(directory::AbstractString, filename::AbstractString)::String
+    return joinpath(directory, filename)
+end
+
+function path(directory::AbstractString, x)::String
+    return joinpath(directory, filename(x))
+end
+
+function save(x; directory = ".")::Nothing
+    save(path(directory, x), x)
+    return nothing
+end
+
+function save(path::AbstractString, x)::Nothing
+    open(path, "w") do io
+        save(io, x)
+    end
+    return nothing
+end
+
+function save(io::IO, kvs::AbstractVector{<: Pair})::Nothing
+    println.(Ref(io), join.(kvs, "; "))
+    return nothing
+end
+
+function save(io::IO, x)::Nothing
+    println(io, x)
+    return nothing
+end
+
+# TODO maybe redesign
+# TODO make more robust
+"""
+`ENV` variable is the source of truth.
+"""
+function dumping!(enable::Bool)::Nothing
+    if enable
+        dumping!()
+    else
+        delete!(ENV, "DUMP")
+    end
+
+    return nothing
+end
+
+function dumping!(directory::AbstractString = ".")::Nothing
+    @assert ispath(directory)
+    ENV["DUMP"] = directory
+    return nothing
+end
+
+# TODO make more functional
+macro dump(arguments...)
+    return dump__(arguments...) |> esc
+end
+
+function dump__(arguments...)
+    return quote
+        $(dump__def(arguments...))
+        if haskey(ENV, "DUMP")
+            mkpath(ENV["DUMP"])
+            $(dump__save(arguments...))
+        end
+    end
+end
+
+function dump__def(filename, object::O)::O where {O}
+    return object
+end
+
+function dump__def(object::O)::O where {O}
+    return object
+end
+
+function dump__save(object)::Expr
+    variable::Symbol = __variable(object)
+    return :($save($path(ENV["DUMP"], $variable), $variable))
+end
+
+function dump__save(filename, object)::Expr
+    variable::Symbol = __variable(object)
+    return :($save($path(ENV["DUMP"], $filename), $variable))
+end
+
+function __variable(variable::Symbol)::Symbol
+    return variable
+end
+
+function __variable(expr::Expr)::Symbol
+    @assert expr.head == :(=)
+    object = expr.args[1]
+
+    if object isa Symbol                # case `x = 1`
+        return object
+    elseif object isa Expr              # case `x::Int = 1`
+        @assert object.head == :(::)
+        return object.args[1]
+    else                                # case "invalid"
+        throw(:invalid_variable_expression => object)
+    end
+end
+
 end # module

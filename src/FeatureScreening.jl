@@ -22,7 +22,7 @@ export names, load, save
 
 # Utilities
 include("Utilities.jl")
-using FeatureScreening.Utilities: ExpStep, partition
+using FeatureScreening.Utilities: ExpStep, partition, @dump
 
 include("importance.jl")
 
@@ -36,6 +36,7 @@ using Random: shuffle as __shuffle
 using ProgressMeter: @showprogress
 using FeatureScreening.Utilities: nfoldCV_forest
 using Statistics: mean
+import FeatureScreening.Utilities: save
 
 ###=============================================================================
 ### API
@@ -78,39 +79,19 @@ function screen(feature_set::FeatureSet{L, N, F};
 
         to_be_selected::FeatureSet = merge(selected, new)
 
-        selected = select_features(to_be_selected;
-                                   count = reduced_size,
-                                   config = config)
+        @dump "importances.$i.csv" importances::Vector{Pair{N, <: Real}} =
+            feature_importance(to_be_selected; config = config)
+
+        important_names::Vector{<: N} =
+            importants(importances; count = reduced_size)
+
+        selected = to_be_selected[:, important_names]
 
         # After the computation
         after(selected)
     end
 
     return selected
-end
-
-function select_features(features::FeatureSet{L, N, F};
-                         count::Int = 5,
-                         config::NamedTuple = (;)
-                        )::FeatureSet{L, N, F} where {L, N, F}
-    importances::Vector{Pair{N, <: Real}} =
-        feature_importance(features; config = config)
-
-    return features[:, importants(importances; count = count)]
-end
-
-function accuracy(features::FeatureSet;
-                  config::NamedTuple = (;),
-                  verbose = false
-                 )::Vector{Float64}
-    return nfoldCV_forest(features; config, verbose)
-end
-
-# TODO
-function accuracy(; kwargs...)::Function
-    return function (features)
-        return accuracy(features; kwargs...)
-    end
 end
 
 # TODO
