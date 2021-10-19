@@ -22,7 +22,7 @@ export names, load, save
 
 # Utilities
 include("Utilities.jl")
-using FeatureScreening.Utilities: ExpStep, partition, @dump
+using FeatureScreening.Utilities: ExpStep, make_rng, partition, @dump
 
 include("importance.jl")
 
@@ -36,7 +36,6 @@ using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
 using ProgressMeter: @showprogress
 using FeatureScreening.Utilities: nfoldCV_forest
 using Statistics: mean
-import FeatureScreening.Utilities: save
 
 ###=============================================================================
 ### API
@@ -66,7 +65,7 @@ function screen(feature_set::FeatureSet{L, N, F};
                )::FeatureSet{L, N, F} where {L, N, F}
     all::Vector{N} = names(feature_set)
     if shuffle
-        __shuffle(all)
+        __shuffle(make_rng(rng), all)
     end
 
     parts = partition(all, step_size; rest = true)

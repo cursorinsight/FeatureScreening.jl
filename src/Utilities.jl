@@ -16,6 +16,8 @@ using Dates: DateTime
 using HDF5: H5T_TIME as HDF5Time, H5S_SCALAR as HDF5Scalar
 import HDF5: datatype, dataspace
 
+using Random: AbstractRNG, GLOBAL_RNG, MersenneTwister
+
 ###=============================================================================
 ### API
 ###=============================================================================
@@ -276,5 +278,8 @@ function __variable(expr::Expr)::Symbol
         throw(:invalid_variable_expression => object)
     end
 end
+
+make_rng(rng::AbstractRNG = GLOBAL_RNG)::AbstractRNG = rng
+make_rng(seed::Integer)::AbstractRNG = MersenneTwister(seed)
 
 end # module
