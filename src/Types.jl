@@ -120,7 +120,7 @@ end
 
 function show(io::IO, features::FeatureSet{L, N, F})::Nothing where {L, N, F}
     (height, width) = size(features)
-    println(io, "$(FeatureSet{L, N, F})<$(height) x $(width)>")
+    print(io, "$(FeatureSet{L, N, F})<$(height) x $(width)>")
     return nothing
 end
 
