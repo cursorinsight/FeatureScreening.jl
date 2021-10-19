@@ -219,9 +219,13 @@ end
 ###-----------------------------------------------------------------------------
 
 function build_forest(feature_set::FeatureSet{L, N, F};
-                      config = (;)
+                      config = (;),
+                      kwargs...
                      ) where {L, N, F}
-    return __build_forest(labels(feature_set), features(feature_set); config)
+    return __build_forest(labels(feature_set),
+                          features(feature_set);
+                          config,
+                          kwargs...)
 end
 
 function nfoldCV_forest(feature_set::FeatureSet;
@@ -234,9 +238,10 @@ function nfoldCV_forest(feature_set::FeatureSet;
 end
 
 function feature_importance(feature_set::FeatureSet{L, N};
-                            config = (;)
+                            config = (;),
+                            kwargs...
                            )::Vector{Pair{N, Int}} where {L, N}
-    forest::RandomForest = build_forest(feature_set; config)
+    forest::RandomForest = build_forest(feature_set; config, kwargs...)
     importances::Vector{Pair{Int, Int}} = feature_importance(forest)
 
     return [names(feature_set)[idx] => importance

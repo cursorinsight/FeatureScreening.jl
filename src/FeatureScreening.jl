@@ -32,7 +32,7 @@ using FeatureScreening.Types: FeatureSet
 using FeatureScreening.Types: names, load, save
 
 # API dependencies
-using Random: shuffle as __shuffle
+using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
 using ProgressMeter: @showprogress
 using FeatureScreening.Utilities: nfoldCV_forest
 using Statistics: mean
@@ -61,7 +61,8 @@ function screen(feature_set::FeatureSet{L, N, F};
                 config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
                 shuffle::Bool               = false,
                 before::Function            = skip,
-                after::Function             = skip
+                after::Function             = skip,
+                rng::Union{AbstractRNG, Integer} = GLOBAL_RNG
                )::FeatureSet{L, N, F} where {L, N, F}
     all::Vector{N} = names(feature_set)
     if shuffle
@@ -80,7 +81,7 @@ function screen(feature_set::FeatureSet{L, N, F};
         to_be_selected::FeatureSet = merge(selected, new)
 
         @dump "importances.$i.csv" importances::Vector{Pair{N, <: Real}} =
-            feature_importance(to_be_selected; config = config)
+            feature_importance(to_be_selected; config, rng)
 
         important_names::Vector{<: N} =
             importants(importances; count = reduced_size)
