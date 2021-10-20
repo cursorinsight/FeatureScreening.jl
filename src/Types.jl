@@ -305,16 +305,6 @@ function isvalid(::Type{FeatureSet}, file::HDF5File)::Bool
     return ["id", "created_at", "labels", "names", "features"] ⊆ keys(file)
 end
 
-# TODO remove ASAP
-function upgrade!(::Type{FeatureSet}, path::AbstractString)::Nothing
-    h5open(path, "r+") do fid
-        get!(fid, "id", uuid4() |> to_hdf5)
-        get!(fid, "created_at", now(UTC) |> to_hdf5)
-    end
-
-    return nothing
-end
-
 ##------------------------------------------------------------------------------
 ## Internals
 ##------------------------------------------------------------------------------
