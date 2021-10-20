@@ -52,11 +52,26 @@ import FeatureScreening.Utilities: partition
 ###=============================================================================
 
 """
-    `struct FeatureSet{L, N, F} end`
+    FeatureSet{L, N, F}
 
-    - `L` is the type of the labels
-    - `N` is the type of the feature names, by default `Int` as a vector index
-    - `F` is the type of the feature values, typically some numeric type
+This object contains feature values by given labels and feature names.
+
+# Parametric types:
+
+- `L`: Type of the labels.
+- `N`: Type of the feature names.
+- `F`: Type of the feature values, typically some numeric type.
+
+# Example
+
+|           | "feature 1" | "feature 2" |   ...   | "feature N" |
+|:---------:|:-----------:|:-----------:|:-------:|:-----------:|
+| "label-1" |   101.001   |   431.331   |   ...   |   20.9221   |
+| "label-1" |   121.340   |   421.393   |   ...   |   21.3419   |
+|    ...    |     ...     |     ...     |   ...   |     ...     |
+| "label-M" |   131.349   |   134.119   |   ...   |   -0.1124   |
+| "label-M" |   128.218   |   329.218   |   ...   |   10.0038   |
+
 """
 @kwdef struct FeatureSet{L, N, F}
     id::UUID = uuid4()
@@ -69,6 +84,15 @@ import FeatureScreening.Utilities: partition
     name_idxs::Dict{N, Int}
 end
 
+"""
+    FeatureSet(labels::AbstractVector{L},
+               names::AbstractVector{N},
+               features::AbstractMatrix{F};
+               id::UUID = uuid4(),
+               created_at::DateTime = now(UTC)
+              )::FeatureSet{L, N, F} where {L, N, F}
+
+"""
 function FeatureSet(labels::AbstractVector{L},
                     names::AbstractVector{N},
                     features::AbstractMatrix{F};
@@ -80,6 +104,12 @@ function FeatureSet(labels::AbstractVector{L},
     return FeatureSet{L, N, F}(; labels, names, features, name_idxs, kwargs...)
 end
 
+"""
+    FeatureSet(X, y)
+
+Create a `FeatureSet` from a feature matrix and labels. (Classic data science
+API)
+"""
 function FeatureSet(X::AbstractMatrix{F},
                     y::AbstractVector{L};
                     kwargs...
@@ -336,10 +366,9 @@ end
 ### Others
 ###-----------------------------------------------------------------------------
 
-# TODO revamp, design
+# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/13
 function merge(a::FeatureSet, b::FeatureSet)::FeatureSet
     @assert labels(a) == labels(b)
-    # TODO
     @assert features(a) isa SubArray
     @assert features(b) isa SubArray
     @assert features(a).parent === features(b).parent
@@ -359,9 +388,7 @@ function merge(xs::FeatureSet...)::FeatureSet
     return reduce(merge, xs)
 end
 
-# TODO refactor feature generation by:
-# - designing the generator function
-# - making to be able to set up custom distribution to produce values
+# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/12
 """
 This function generates only per-label-BALANCED feature set.
 """

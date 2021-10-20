@@ -29,7 +29,7 @@ const DEFAULT_CONFIG_FOR_FEATURE_IMPORTANCE =
      min_samples_split    = 4,
      min_purity_increase  = 0.1)
 
-# TODO feature indices
+# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/18
 """
     feature_importance(features...; config = ())
 
@@ -44,7 +44,6 @@ Algorithm:
      features.
   3. Sort features by their importance (frequency).
 """
-
 function feature_importance(features...;
                             config::NamedTuple = (;),
                             kwargs...
@@ -72,7 +71,6 @@ function fold(f, leaf::Leaf; init)
     return f(init, leaf)
 end
 
-# TODO feature indices
 """
     feature_importance(forest::RandomForest)
 
@@ -100,4 +98,16 @@ end
 
 function accumulate_id!(occurrences::Dict{Int, Int}, ::Leaf)::Dict{Int, Int}
     return occurrences
+end
+
+###-----------------------------------------------------------------------------
+### Selection
+###-----------------------------------------------------------------------------
+
+# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/19
+# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/20
+function importants(importances::Vector{<: Pair{N}};
+                    count::Int = 1
+                   )::Vector{N} where {N}
+    return first.(importances[1:min(end, count)])
 end

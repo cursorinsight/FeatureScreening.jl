@@ -4,60 +4,49 @@ module Utilities
 ### Imports
 ###=============================================================================
 
-using DecisionTree: Ensemble as RandomForest
+# Range steps
+import Base: length, steprange_last, iterate
 
+# `DecisionTree` wrappers
+using DecisionTree: Ensemble as RandomForest
 using DecisionTree: build_forest, nfoldCV_forest
 
+# File I/O
 using UUIDs: UUID, uuid5
 
-using HDF5: File as HDF5File
+# HDF5
 import Base: get, get!
-using Dates: DateTime
-using HDF5: H5T_TIME as HDF5Time, H5S_SCALAR as HDF5Scalar
-import HDF5: datatype, dataspace
+using HDF5: File as HDF5File
 
+# Rest
 using Random: AbstractRNG, GLOBAL_RNG, MersenneTwister
 
 ###=============================================================================
 ### API
 ###=============================================================================
 
-const Maybe{T} = Union{Nothing, T}
+###-----------------------------------------------------------------------------
+### Range steps
+###-----------------------------------------------------------------------------
 
-function partition(xs::AbstractVector{X},
-                   n::Int;
-                   rest::Bool = false
-                  )::Vector{Vector{X}} where {X}
-    # TODO remove this conditional function call
-    m::Int = (rest ? ceil : floor)(length(xs) / n)
-    return [xs[(n*(i-1)+1):min(n*i, length(xs))] for i in 1:m]
-end
-
+# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/14
 abstract type AbstractStep end
 
-# TODO
+##------------------------------------------------------------------------------
+## Exponential range step
+##------------------------------------------------------------------------------
+
+# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/15
 struct ExpStep{T} <: AbstractStep
     base::T
 
     function ExpStep(base::T) where {T}
-        # TODO
         @assert 1 < base
         return new{T}(base)
     end
 end
 
-struct Size{T}
-    n::T
-end
-
-struct ZeroStep <: AbstractStep end
-
-Base.zero(::T) where {T <: AbstractStep} = zero(T)
-Base.zero(::Type{T}) where {T <: AbstractStep} = ZeroStep()
-Base.:<(::ZeroStep, ::AbstractStep) = true
-
-# TODO
-function Base.length(range::StepRange{Int, <: ExpStep})
+function length(range::StepRange{Int, <: ExpStep})
     return range.stop - range.start + 1
 end
 
@@ -65,12 +54,7 @@ function (::Colon)(start::Real, step::S, stop::Real) where {S <: ExpStep}
     return StepRange{Int, S}(ceil(Int, log(step.base, start)), step, stop)
 end
 
-function (::Colon)(start::Real, size::S, stop::Real) where {S <: Size}
-    return range(start, stop; length = size.n)
-end
-
-function Base.steprange_last(start, step::ExpStep, stop)
-    # TODO
+function steprange_last(start, step::ExpStep, stop)
     if iszero(stop)
         return -1
     else
@@ -78,15 +62,30 @@ function Base.steprange_last(start, step::ExpStep, stop)
     end
 end
 
-function Base.iterate(range::StepRange{Int, ExpStep{Int}}, state = nothing)
+function iterate(range::StepRange{Int, ExpStep{Int}}, state = nothing)
     if state isa Nothing
         state = range.start
     end
     state > range.stop && return nothing
 
-    # TODO
     return (Int(range.step.base ^ float(state)), state+1)
 end
+
+##------------------------------------------------------------------------------
+## Fix size range step
+##------------------------------------------------------------------------------
+
+struct Size{T}
+    n::T
+end
+
+function (::Colon)(start::Real, size::S, stop::Real) where {S <: Size}
+    return range(start, stop; length = size.n)
+end
+
+###-----------------------------------------------------------------------------
+### `DecisionTree` wrappers
+###-----------------------------------------------------------------------------
 
 const DEFAULT_BUILD_FOREST_CONFIG =
     (n_subfeatures          = -1,
@@ -143,46 +142,18 @@ function __nfoldCV_forest(labels::AbstractVector,
                           kwargs...)
 end
 
+###-----------------------------------------------------------------------------
+### File I/O
+###-----------------------------------------------------------------------------
+
+##------------------------------------------------------------------------------
+## Save
+##------------------------------------------------------------------------------
+
 function save end
 
 function save(; kwargs...)::Function
     return x -> save(x; kwargs...)
-end
-
-function load end
-
-function id(nt::C)::UUID where {C <: NamedTuple}
-    return uuid5(UUID(hash(nt)), "config")
-end
-
-function created_at end
-
-const FILENAME_DATETIME_FORMAT = "YYYYmmdd-HHMMSS"
-
-function get(file::HDF5File, key::AbstractString, default)
-    return if haskey(file, key)
-        read(file, key)
-    else
-        default
-    end
-end
-
-function get!(file::HDF5File, key::AbstractString, default)
-    return if haskey(file, key)
-        read(file, key)
-    else
-        file[key] = default
-    end
-end
-
-function filename end
-
-function path(directory::AbstractString, filename::AbstractString)::String
-    return joinpath(directory, filename)
-end
-
-function path(directory::AbstractString, x)::String
-    return joinpath(directory, filename(x))
 end
 
 function save(x; directory = ".")::Nothing
@@ -207,8 +178,38 @@ function save(io::IO, x)::Nothing
     return nothing
 end
 
-# TODO maybe redesign
-# TODO make more robust
+##------------------------------------------------------------------------------
+## Load
+##------------------------------------------------------------------------------
+
+function load end
+
+##------------------------------------------------------------------------------
+## Somehow related callbacks
+##------------------------------------------------------------------------------
+## Paths, filenames, computed identifiers, etc.
+
+function id(nt::C)::UUID where {C <: NamedTuple}
+    return uuid5(UUID(hash(nt)), "config")
+end
+
+function created_at end
+
+function filename end
+
+function path(directory::AbstractString, filename::AbstractString)::String
+    return joinpath(directory, filename)
+end
+
+function path(directory::AbstractString, x)::String
+    return joinpath(directory, filename(x))
+end
+
+###-----------------------------------------------------------------------------
+### Dumping
+###-----------------------------------------------------------------------------
+# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/16
+
 """
 `ENV` variable is the source of truth.
 """
@@ -228,7 +229,6 @@ function dumping!(directory::AbstractString = ".")::Nothing
     return nothing
 end
 
-# TODO make more functional
 macro dump(arguments...)
     return dump__(arguments...) |> esc
 end
@@ -279,7 +279,48 @@ function __variable(expr::Expr)::Symbol
     end
 end
 
+###-----------------------------------------------------------------------------
+### HDF5
+###-----------------------------------------------------------------------------
+
+function get(file::HDF5File, key::AbstractString, default)
+    return if haskey(file, key)
+        read(file, key)
+    else
+        default
+    end
+end
+
+function get!(file::HDF5File, key::AbstractString, default)
+    return if haskey(file, key)
+        read(file, key)
+    else
+        file[key] = default
+    end
+end
+
+###-----------------------------------------------------------------------------
+### Rest
+###-----------------------------------------------------------------------------
+
+const Maybe{T} = Union{Nothing, T}
+
+function partition(xs::AbstractVector{X},
+                   n::Int;
+                   rest::Bool = false
+                  )::Vector{Vector{X}} where {X}
+    # TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/17
+    m::Int = (rest ? ceil : floor)(length(xs) / n)
+    return [xs[(n*(i-1)+1):min(n*i, length(xs))] for i in 1:m]
+end
+
 make_rng(rng::AbstractRNG = GLOBAL_RNG)::AbstractRNG = rng
 make_rng(seed::Integer)::AbstractRNG = MersenneTwister(seed)
+
+function skip(args...; kwargs...)::Nothing
+    return nothing
+end
+
+const FILENAME_DATETIME_FORMAT = "YYYYmmdd-HHMMSS"
 
 end # module
