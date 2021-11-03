@@ -104,10 +104,60 @@ end
 ### Selection
 ###-----------------------------------------------------------------------------
 
-# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/19
 # TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/20
-function importants(importances::Vector{<: Pair{N}};
-                    count::Int = 1
-                   )::Vector{N} where {N}
-    return first.(importances[1:min(end, count)])
+abstract type SelectorMethod end
+
+function select end
+
+struct Top{T} <: SelectorMethod
+    size::T
+end
+
+function select(feature_importances::Vector{<: Pair{L}},
+                top::Top
+               )::Vector{L} where {L}
+    selected_top::Integer = get_count(feature_importances, top.size)
+    return label.(feature_importances[begin:selected_top])
+end
+
+struct Random{T} <: SelectorMethod
+    size::T
+end
+
+function select(feature_importances::Vector{<: Pair{L}},
+                random::Random
+               )::Vector{L} where {L}
+    selected_random::Integer = get_count(feature_importances, random.size)
+    random_feature_importances::Vector =
+        rand(feature_importances, selected_random)
+    sort!(random_feature_importances; rev = true, by = importance)
+    return label.(random_feature_importances)
+end
+
+##------------------------------------------------------------------------------
+## Get count
+##------------------------------------------------------------------------------
+
+function get_count(itr::AbstractVector, count::Integer)::Integer
+    @assert 0 <= count <= length(itr)
+    return count
+end
+
+function get_count(itr::AbstractVector, ratio::AbstractFloat)::Int
+    @assert 0.0 <= ratio <= 1.0
+    return floor(Int, length(itr) * ratio)
+end
+
+##------------------------------------------------------------------------------
+## Getters
+##------------------------------------------------------------------------------
+
+function label(feature_importance::Pair{L, I})::L where {L, I}
+    (label::L, _) = feature_importance
+    return label
+end
+
+function importance(feature_importance::Pair{L, I})::I where {L, I}
+    (_, importance::I) = feature_importance
+    return importance
 end
