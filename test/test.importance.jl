@@ -8,7 +8,7 @@
 ### Imports
 ###=============================================================================
 
-using FeatureScreening: select, Top, Random, get_count
+using FeatureScreening: select, Top, Random, IndexBased, get_count
 
 ###=============================================================================
 ### Testcases
@@ -51,6 +51,26 @@ using FeatureScreening: select, Top, Random, get_count
         let result = select(feature_importances, Random(0.77))
             @test result isa Vector{Int}
             @test result == [4, 4, 33]
+        end
+    end
+
+    @testset "Selection -- IndexBased" begin
+        feature_importances = [4 => 12,
+                               3 => 11,
+                               123 => 3,
+                               33 => 1,
+                               5 => 1,
+                               7 => 1,
+                               9 => 0]
+
+        let result = select(feature_importances, IndexBased([3, 1, 2, 1]))
+            @test result isa Vector{Int}
+            @test result == [123, 4, 3, 4]
+        end
+
+        let result = select(feature_importances, IndexBased(2:2:6))
+            @test result isa Vector{Int}
+            @test result == [3, 33, 7]
         end
     end
 

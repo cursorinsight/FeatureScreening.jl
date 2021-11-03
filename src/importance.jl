@@ -134,6 +134,16 @@ function select(feature_importances::Vector{<: Pair{L}},
     return label.(random_feature_importances)
 end
 
+struct IndexBased <: SelectorMethod
+    indices::AbstractVector{<: Integer}
+end
+
+function select(feature_importances::Vector{<: Pair{L}},
+                selector::IndexBased
+               )::Vector{L} where {L}
+    return label.(feature_importances[selector.indices])
+end
+
 ##------------------------------------------------------------------------------
 ## Get count
 ##------------------------------------------------------------------------------
