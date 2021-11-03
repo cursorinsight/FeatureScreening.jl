@@ -16,7 +16,7 @@ using FeatureScreening: select, Top, Random, get_count
 
 @testset "Importance" begin
 
-    @testset "Selection" begin
+    @testset "Selection -- Top" begin
         feature_importances = [4 => 12,
                                3 => 11,
                                123 => 3,
@@ -33,6 +33,13 @@ using FeatureScreening: select, Top, Random, get_count
             @test result isa Vector{Int}
             @test result == [4]
         end
+    end
+
+    @testset "Selection -- Random" begin
+        feature_importances = [4 => 12,
+                               3 => 11,
+                               123 => 3,
+                               33 => 1]
 
         # Random selector method
         let result = select(feature_importances, Random(3))
@@ -45,7 +52,9 @@ using FeatureScreening: select, Top, Random, get_count
             @test result isa Vector{Int}
             @test result == [4, 4, 33]
         end
+    end
 
+    @testset "Selection utility -- Get count" begin
         # Get count
         @test get_count(1:5, 0) == 0
         @test get_count(1:5, 1) == 1
@@ -64,7 +73,6 @@ using FeatureScreening: select, Top, Random, get_count
 
         @test get_count(1:100, 0.25) == 25
         @test get_count(1:100, 1/3) == 33
-
     end
 
 end
