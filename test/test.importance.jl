@@ -28,10 +28,32 @@ using FeatureScreening: select, Top, Random, IndexBased, get_count
             @test result == [4, 3, 123]
         end
 
+        # Top count selector method in strict mode
+        @test_throws AssertionError select(feature_importances,
+                                           Top(10);
+                                           strict = true)
+
+        # Top count selector method without strict mode
+        let result = select(feature_importances, Top(10); strict = false)
+            @test result isa Vector{Int}
+            @test result == [4, 3, 123, 33]
+        end
+
         # Top ratio selector method
         let result = select(feature_importances, Top(0.25))
             @test result isa Vector{Int}
             @test result == [4]
+        end
+
+        # Top ratio selector method in strict mode
+        @test_throws AssertionError select(feature_importances,
+                                           Top(3.1);
+                                           strict = true)
+
+        # Top ratio selector method without strict mode
+        let result = select(feature_importances, Top(3.1); strict = false)
+            @test result isa Vector{Int}
+            @test result == [4, 3, 123, 33]
         end
     end
 
@@ -47,10 +69,32 @@ using FeatureScreening: select, Top, Random, IndexBased, get_count
             @test result == [4, 123, 33]
         end
 
+        # Random selector in strict mode
+        @test_throws AssertionError select(feature_importances,
+                                           Random(10);
+                                           strict = true)
+
+        # Random selector without strict mode
+        let result = select(feature_importances, Random(10); strict = false)
+            @test result isa Vector{Int}
+            @test result == [4, 4, 123, 33]
+        end
+
         # Random ratio selector method
         let result = select(feature_importances, Random(0.77))
             @test result isa Vector{Int}
             @test result == [4, 4, 33]
+        end
+
+        # Random ratio selector in strict mode
+        @test_throws AssertionError select(feature_importances,
+                                           Random(3.1);
+                                           strict = true)
+
+        # Random ratio selector without strict mode
+        let result = select(feature_importances, Random(3.1); strict = false)
+            @test result isa Vector{Int}
+            @test result == [3, 3, 123, 33]
         end
     end
 
@@ -63,14 +107,29 @@ using FeatureScreening: select, Top, Random, IndexBased, get_count
                                7 => 1,
                                9 => 0]
 
+        # Index based selector method
         let result = select(feature_importances, IndexBased([3, 1, 2, 1]))
             @test result isa Vector{Int}
             @test result == [123, 4, 3, 4]
         end
 
+        # Index based selector method
         let result = select(feature_importances, IndexBased(2:2:6))
             @test result isa Vector{Int}
             @test result == [3, 33, 7]
+        end
+
+        # Index based selector method in strict mode
+        @test_throws AssertionError select(feature_importances,
+                                           IndexBased(1:100);
+                                           strict = true)
+
+        # Index based selector method without strict mode
+        let result = select(feature_importances,
+                            IndexBased(1:100);
+                            strict = false)
+            @test result isa Vector{Int}
+            @test result == [4, 3, 123, 33, 5, 7, 9]
         end
     end
 

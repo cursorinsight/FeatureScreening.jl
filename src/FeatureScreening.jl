@@ -135,7 +135,8 @@ function screen(feature_set::FeatureSet{L, N, F};
         @dump "importances.$i.csv" importances::Vector{Pair{N, <: Real}} =
             feature_importance(to_be_selected; config, rng)
 
-        important_names::Vector{<: N} = select(importances, Top(reduced_size))
+        important_names::Vector{<: N} =
+            select(importances, Top(reduced_size); strict = false)
 
         selected = to_be_selected[:, important_names]
 

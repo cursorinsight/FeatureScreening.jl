@@ -114,9 +114,10 @@ struct Top{T} <: SelectorMethod
 end
 
 function select(feature_importances::Vector{<: Pair{L}},
-                top::Top
+                top::Top;
+                strict::Bool = true
                )::Vector{L} where {L}
-    selected_top::Integer = get_count(feature_importances, top.size)
+    selected_top::Integer = get_count(feature_importances, top.size; strict)
     return label.(feature_importances[begin:selected_top])
 end
 
@@ -125,9 +126,11 @@ struct Random{T} <: SelectorMethod
 end
 
 function select(feature_importances::Vector{<: Pair{L}},
-                random::Random
+                random::Random;
+                strict::Bool = true
                )::Vector{L} where {L}
-    selected_random::Integer = get_count(feature_importances, random.size)
+    selected_random::Integer =
+        get_count(feature_importances, random.size; strict)
     random_feature_importances::Vector =
         rand(feature_importances, selected_random)
     sort!(random_feature_importances; rev = true, by = importance)
@@ -139,22 +142,46 @@ struct IndexBased <: SelectorMethod
 end
 
 function select(feature_importances::Vector{<: Pair{L}},
-                selector::IndexBased
+                selector::IndexBased;
+                strict::Bool = true
                )::Vector{L} where {L}
-    return label.(feature_importances[selector.indices])
+    indices::AbstractVector{<: Integer} =
+        if strict
+            @assert selector.indices ⊆ keys(feature_importances)
+            selector.indices
+        else
+            filter(selector.indices) do idx
+                return idx in keys(feature_importances)
+            end
+        end
+    return label.(feature_importances[indices])
 end
 
 ##------------------------------------------------------------------------------
 ## Get count
 ##------------------------------------------------------------------------------
 
-function get_count(itr::AbstractVector, count::Integer)::Integer
-    @assert 0 <= count <= length(itr)
+function get_count(itr::AbstractVector,
+                   count::Integer;
+                   strict::Bool = true
+                  )::Integer
+    if strict
+        @assert 0 <= count <= length(itr)
+    else
+        count = clamp(count, 0, length(itr))
+    end
     return count
 end
 
-function get_count(itr::AbstractVector, ratio::AbstractFloat)::Int
-    @assert 0.0 <= ratio <= 1.0
+function get_count(itr::AbstractVector,
+                   ratio::AbstractFloat;
+                   strict::Bool = true
+                  )::Int
+    if strict
+        @assert 0.0 <= ratio <= 1.0
+    else
+        ratio = clamp(ratio, 0.0, 1.0)
+    end
     return floor(Int, length(itr) * ratio)
 end
 
