@@ -97,7 +97,7 @@ end
 - `reduced_size`: Expected number of screened features (Right now, this is an
   upper bound).
 - `step_size`: Size of each partition.
-- `config`: Random forset configuration of the importance computing.
+- `config`: Random forest configuration of the importance computing.
 - `shuffle`: Flag to shuffle features before partition, to randomize the order
   of the features.
 - `before`: Callback function, that executes before importance computation and
