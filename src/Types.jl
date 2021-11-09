@@ -45,7 +45,6 @@ using HDF5: h5open, File as HDF5File
 
 ### Others
 import Base: merge, rand
-import FeatureScreening.Utilities: partition
 
 ###=============================================================================
 ### Feature set

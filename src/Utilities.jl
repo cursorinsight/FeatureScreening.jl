@@ -305,17 +305,13 @@ end
 
 const Maybe{T} = Union{Nothing, T}
 
-function partition(xs::AbstractVector{X},
-                   n::Int;
-                   rest::Bool = false
-                  )::Vector{Vector{X}} where {X}
-    # TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/17
-    m::Int = (rest ? ceil : floor)(length(xs) / n)
-    return [xs[(n*(i-1)+1):min(n*i, length(xs))] for i in 1:m]
+function make_rng(rng::AbstractRNG = GLOBAL_RNG)::AbstractRNG
+    return rng
 end
 
-make_rng(rng::AbstractRNG = GLOBAL_RNG)::AbstractRNG = rng
-make_rng(seed::Integer)::AbstractRNG = MersenneTwister(seed)
+function make_rng(seed::Integer)::AbstractRNG
+    return MersenneTwister(seed)
+end
 
 function skip(args...; kwargs...)::Nothing
     return nothing

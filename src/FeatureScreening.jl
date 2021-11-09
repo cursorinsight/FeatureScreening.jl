@@ -25,7 +25,8 @@ export load, save, labels, names, features
 
 # Utilities
 include("Utilities.jl")
-using FeatureScreening.Utilities: ExpStep, make_rng, partition, @dump
+using FeatureScreening.Utilities: ExpStep, make_rng, @dump
+using Base.Iterators: partition
 
 include("importance.jl")
 
@@ -121,10 +122,9 @@ function screen(feature_set::FeatureSet{L, N, F};
         __shuffle(make_rng(rng), all)
     end
 
-    parts = partition(all, step_size; rest = true)
     selected::FeatureSet = feature_set[:, N[]]
 
-    @showprogress "Screen" for (i, part) in enumerate(parts)
+    @showprogress "Screen" for (i, part) in enumerate(partition(all, step_size))
         new::FeatureSet = feature_set[:, part]
 
         # Before the computation

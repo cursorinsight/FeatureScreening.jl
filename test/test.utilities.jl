@@ -8,7 +8,7 @@
 ### Imports
 ###=============================================================================
 
-using FeatureScreening.Utilities: partition, ExpStep, Size
+using FeatureScreening.Utilities: ExpStep, Size
 using FeatureScreening.Utilities: @dump, dumping!
 
 ###=============================================================================
@@ -16,18 +16,6 @@ using FeatureScreening.Utilities: @dump, dumping!
 ###=============================================================================
 
 @testset "Utilities" begin
-
-    @testset "Partition" begin
-        @test [11:11, 12:12, 13:13, 14:14]  == partition(11:14, 1)
-        @test [11:12, 13:14]                == partition(11:14, 2)
-        @test [11:13]                       == partition(11:14, 3)
-        @test [11:14]                       == partition(11:14, 4)
-
-        @test [11:11, 12:12, 13:13, 14:14]  == partition(11:14, 1; rest = true)
-        @test [11:12, 13:14]                == partition(11:14, 2; rest = true)
-        @test [11:13, 14:14]                == partition(11:14, 3; rest = true)
-        @test [11:14]                       == partition(11:14, 4; rest = true)
-    end
 
     @testset "Exponential range" begin
         @test [1]           == (1:ExpStep(2):1)
