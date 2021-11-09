@@ -35,6 +35,9 @@ include("Types.jl")
 using FeatureScreening.Types: FeatureSet
 using FeatureScreening.Types: names, load, save
 
+# Fixtures
+include("Fixtures.jl")
+
 # API dependencies
 using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
 using ProgressMeter: @showprogress

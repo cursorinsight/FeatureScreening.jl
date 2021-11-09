@@ -8,13 +8,24 @@
 ### Imports
 ###=============================================================================
 
+using FeatureScreening: feature_importance
+using FeatureScreening.Types: FeatureSet, names
 using FeatureScreening: select, Top, Random, IndexBased, get_count
+using FeatureScreening: label, importance
 
 ###=============================================================================
 ### Testcases
 ###=============================================================================
 
 @testset "Importance" begin
+
+    @testset "Feature importance" begin
+        feature_set::FeatureSet = fixture(:feature_set)
+        feature_importances = feature_importance(feature_set)
+        @test label.(feature_importances) ⊆ names(feature_set)
+        @test importance.(feature_importances) isa Vector{Int}
+        @test all(0 .< importance.(feature_importances))
+    end
 
     @testset "Selection -- Top" begin
         feature_importances = [4 => 12,
