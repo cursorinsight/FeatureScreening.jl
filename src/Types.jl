@@ -80,7 +80,7 @@ This object contains feature values by given labels and feature names.
     names::AbstractVector{N}
     features::AbstractMatrix{F}
 
-    name_idxs::Dict{N, Int}
+    __name_indices::Dict{N, Int}
 end
 
 """
@@ -99,8 +99,15 @@ function FeatureSet(labels::AbstractVector{L},
                    )::FeatureSet{L, N, F} where {L, N, F}
     @assert (length(labels), length(names)) == size(features)
 
-    name_idxs::Dict{N, Int} = Dict(name => i for (i, name) in enumerate(names))
-    return FeatureSet{L, N, F}(; labels, names, features, name_idxs, kwargs...)
+    __name_indices::Dict{N, Int} =
+        Dict(name => i for (i, name) in enumerate(names))
+
+    return FeatureSet{L, N, F}(;
+                               labels,
+                               names,
+                               features,
+                               __name_indices,
+                               kwargs...)
 end
 
 """
@@ -165,26 +172,26 @@ function hash(feature_set::FeatureSet, h::UInt64)::UInt64
 end
 
 function getindex(feature_set::FeatureSet{L, N, F},
-                  i,
-                  j,
+                  label_indices,
+                  name_indices,
                  )::FeatureSet{L, N, F} where {L, N, F}
-    j = __name_idxs(feature_set, j)
+    i = label_indices
+    j = resolve_name_indices(feature_set, name_indices)
 
-    __labels::AbstractVector{L} = @view labels(feature_set)[i]
-    __names::AbstractVector{N} = @view names(feature_set)[j]
-    __features::AbstractMatrix{F} = @view features(feature_set)[i, j]
-    return FeatureSet(__labels, __names, __features)
+    return FeatureSet(@view(labels(feature_set)[i]),
+                      @view(names(feature_set)[j]),
+                      @view(features(feature_set)[i, j]))
 end
 
-function __name_idxs(feature_set::FeatureSet, ::Colon)::Colon
+function resolve_name_indices(feature_set::FeatureSet, ::Colon)::Colon
     return (:)
 end
 
-function __name_idxs(feature_set::FeatureSet{_L, N},
-                     names::AbstractVector{N}
-                    )::Vector{Int} where {_L, N}
+function resolve_name_indices(feature_set::FeatureSet{_L, N},
+                              names::AbstractVector{<: N}
+                             )::Vector{Int} where {_L, N}
     return map(names) do name::N
-        return feature_set.name_idxs[name]
+        return feature_set.__name_indices[name]
     end
 end
 
@@ -273,8 +280,8 @@ function feature_importance(feature_set::FeatureSet{L, N};
     forest::RandomForest = build_forest(feature_set; config, kwargs...)
     importances::Vector{Pair{Int, Int}} = feature_importance(forest)
 
-    return [names(feature_set)[idx] => importance
-            for (idx, importance) in importances]
+    return [names(feature_set)[i] => importance
+            for (i, importance) in importances]
 end
 
 ###-----------------------------------------------------------------------------

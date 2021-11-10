@@ -1,3 +1,9 @@
+###-----------------------------------------------------------------------------
+### Copyright (C) 2021- Cursor Insight
+###
+### All rights reserved.
+###-----------------------------------------------------------------------------
+
 module Utilities
 
 ###=============================================================================
@@ -230,42 +236,42 @@ function dumping!(directory::AbstractString = ".")::Nothing
 end
 
 macro dump(arguments...)
-    return dump__(arguments...) |> esc
+    return dump_expression(arguments...) |> esc
 end
 
-function dump__(arguments...)
+function dump_expression(arguments...)
     return quote
-        $(dump__def(arguments...))
+        $(dump_definition(arguments...))
         if haskey(ENV, "DUMP")
             mkpath(ENV["DUMP"])
-            $(dump__save(arguments...))
+            $(dump_save_expression(arguments...))
         end
     end
 end
 
-function dump__def(filename, object::O)::O where {O}
+function dump_definition(filename, object::O)::O where {O}
     return object
 end
 
-function dump__def(object::O)::O where {O}
+function dump_definition(object::O)::O where {O}
     return object
 end
 
-function dump__save(object)::Expr
-    variable::Symbol = __variable(object)
+function dump_save_expression(object)::Expr
+    variable::Symbol = dump_variable(object)
     return :($save($path(ENV["DUMP"], $variable), $variable))
 end
 
-function dump__save(filename, object)::Expr
-    variable::Symbol = __variable(object)
+function dump_save_expression(filename, object)::Expr
+    variable::Symbol = dump_variable(object)
     return :($save($path(ENV["DUMP"], $filename), $variable))
 end
 
-function __variable(variable::Symbol)::Symbol
+function dump_variable(variable::Symbol)::Symbol
     return variable
 end
 
-function __variable(expr::Expr)::Symbol
+function dump_variable(expr::Expr)::Symbol
     @assert expr.head == :(=)
     object = expr.args[1]
 
