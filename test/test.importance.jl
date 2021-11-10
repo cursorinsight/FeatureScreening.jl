@@ -34,7 +34,7 @@ using FeatureScreening: label, importance
                                33 => 1]
 
         # Top count selector method
-        let result = select(feature_importances, Top(3))
+        let result = select(feature_importances, Top(3)) .|> label
             @test result isa Vector{Int}
             @test result == [4, 3, 123]
         end
@@ -42,16 +42,18 @@ using FeatureScreening: label, importance
         # Top count selector method in strict mode
         @test_throws AssertionError select(feature_importances,
                                            Top(10);
-                                           strict = true)
+                                           strict = true) .|> label
 
         # Top count selector method without strict mode
-        let result = select(feature_importances, Top(10); strict = false)
+        let result = select(feature_importances,
+                            Top(10);
+                            strict = false) .|> label
             @test result isa Vector{Int}
             @test result == [4, 3, 123, 33]
         end
 
         # Top ratio selector method
-        let result = select(feature_importances, Top(0.25))
+        let result = select(feature_importances, Top(0.25)) .|> label
             @test result isa Vector{Int}
             @test result == [4]
         end
@@ -59,10 +61,12 @@ using FeatureScreening: label, importance
         # Top ratio selector method in strict mode
         @test_throws AssertionError select(feature_importances,
                                            Top(3.1);
-                                           strict = true)
+                                           strict = true) .|> label
 
         # Top ratio selector method without strict mode
-        let result = select(feature_importances, Top(3.1); strict = false)
+        let result = select(feature_importances,
+                            Top(3.1);
+                            strict = false) .|> label
             @test result isa Vector{Int}
             @test result == [4, 3, 123, 33]
         end
@@ -75,37 +79,41 @@ using FeatureScreening: label, importance
                                33 => 1]
 
         # Random selector method
-        let result = select(feature_importances, Random(3))
+        let result = select(feature_importances, Random(3)) .|> label
             @test result isa Vector{Int}
-            @test result == [4, 123, 33]
+            @test result == [123, 33, 4]
         end
 
         # Random selector in strict mode
         @test_throws AssertionError select(feature_importances,
                                            Random(10);
-                                           strict = true)
+                                           strict = true) .|> label
 
         # Random selector without strict mode
-        let result = select(feature_importances, Random(10); strict = false)
+        let result = select(feature_importances,
+                            Random(10);
+                            strict = false) .|> label
             @test result isa Vector{Int}
-            @test result == [4, 4, 123, 33]
+            @test result == [4, 4, 33, 123]
         end
 
         # Random ratio selector method
-        let result = select(feature_importances, Random(0.77))
+        let result = select(feature_importances, Random(0.77)) .|> label
             @test result isa Vector{Int}
-            @test result == [4, 4, 33]
+            @test result == [4, 33, 4]
         end
 
         # Random ratio selector in strict mode
         @test_throws AssertionError select(feature_importances,
                                            Random(3.1);
-                                           strict = true)
+                                           strict = true) .|> label
 
         # Random ratio selector without strict mode
-        let result = select(feature_importances, Random(3.1); strict = false)
+        let result = select(feature_importances,
+                            Random(3.1);
+                            strict = false) .|> label
             @test result isa Vector{Int}
-            @test result == [3, 3, 123, 33]
+            @test result == [3, 33, 3, 123]
         end
     end
 
@@ -119,13 +127,14 @@ using FeatureScreening: label, importance
                                9 => 0]
 
         # Index based selector method
-        let result = select(feature_importances, IndexBased([3, 1, 2, 1]))
+        let result = select(feature_importances,
+                            IndexBased([3, 1, 2, 1])) .|> label
             @test result isa Vector{Int}
             @test result == [123, 4, 3, 4]
         end
 
         # Index based selector method
-        let result = select(feature_importances, IndexBased(2:2:6))
+        let result = select(feature_importances, IndexBased(2:2:6)) .|> label
             @test result isa Vector{Int}
             @test result == [3, 33, 7]
         end
@@ -133,12 +142,12 @@ using FeatureScreening: label, importance
         # Index based selector method in strict mode
         @test_throws AssertionError select(feature_importances,
                                            IndexBased(1:100);
-                                           strict = true)
+                                           strict = true) .|> label
 
         # Index based selector method without strict mode
         let result = select(feature_importances,
                             IndexBased(1:100);
-                            strict = false)
+                            strict = false) .|> label
             @test result isa Vector{Int}
             @test result == [4, 3, 123, 33, 5, 7, 9]
         end

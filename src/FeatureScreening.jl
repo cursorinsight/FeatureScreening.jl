@@ -139,7 +139,7 @@ function screen(feature_set::FeatureSet{L, N, F};
             feature_importance(to_be_selected; config, rng)
 
         important_names::Vector{<: N} =
-            select(importances, Top(reduced_size); strict = false)
+            select(importances, Top(reduced_size); strict = false) .|> label
 
         selected = to_be_selected[:, important_names]
 
