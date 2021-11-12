@@ -109,7 +109,7 @@ abstract type SelectorMethod end
 
 function select end
 
-struct Top{T} <: SelectorMethod
+struct Top{T <: Real} <: SelectorMethod
     size::T
 end
 
@@ -174,7 +174,7 @@ function get_count(itr::AbstractVector,
 end
 
 function get_count(itr::AbstractVector,
-                   ratio::AbstractFloat;
+                   ratio::Real;
                    strict::Bool = true
                   )::Int
     if strict

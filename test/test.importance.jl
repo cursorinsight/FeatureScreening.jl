@@ -160,6 +160,8 @@ using FeatureScreening: label, importance
         @test get_count(1:5, 0.9) == 4
         @test_throws AssertionError get_count(1:5, -0.5)
         @test_throws AssertionError get_count(1:5, 3.7)
+        @test get_count(1:100, 1//3) == 33 # Rational
+        @test get_count(1:100, π; strict = false) == 100 # Irrational
 
         @test get_count(1:100, 0.25) == 25
         @test get_count(1:100, 1/3) == 33
