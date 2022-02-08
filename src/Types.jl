@@ -294,6 +294,7 @@ end
 
 function save(feature_set::FeatureSet; directory = ".")::Nothing
     path::String = joinpath(directory, filename(feature_set))
+    @info "Created file" path
     save(path, feature_set)
     return nothing
 end
