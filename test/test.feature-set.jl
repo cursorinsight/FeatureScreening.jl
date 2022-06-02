@@ -12,6 +12,7 @@ using FeatureScreening.Types: FeatureSet
 using FeatureScreening.Utilities: id
 using FeatureScreening.Types: labels, names, features
 using FeatureScreening.Types: save, load
+using HDF5: ishdf5, h5open, File
 
 ###=============================================================================
 ### Tests
@@ -93,18 +94,26 @@ using FeatureScreening.Types: save, load
 end
 
 const FEATURE_SETS =
-    [rand(FeatureSet, 50, 30; label_count = 10),
-     rand(FeatureSet, 50, 30; label_count = 10)[:, 1:5]]
+    ["feature set" => rand(FeatureSet, 50, 30; label_count = 10),
+     "feature subset" => rand(FeatureSet, 50, 30; label_count = 10)[:, 1:5]]
 
-@testset "Save and load feature set" for feature_set in FEATURE_SETS
-
+@testset "Save and load $name" for (name, feature_set) in FEATURE_SETS
     mktempdir() do directory::String
-
+        # Save
         save(feature_set; directory)
-        @test isfile("$directory/$(id(feature_set)).hdf5")
+        path = "$directory/$(id(feature_set)).hdf5"
 
-        loaded::FeatureSet =
-            load(FeatureSet, "$directory/$(id(feature_set)).hdf5")
+        # File storage content
+        @test isfile(path)
+        @test ishdf5(path)
+
+        h5open(path, "r") do f
+            @test f isa File
+            @test ["id", "created_at", "names", "labels", "features"] ⊆ keys(f)
+        end
+
+        # Load
+        loaded::FeatureSet = load(FeatureSet, path)
         @test feature_set isa FeatureSet
         @test size(loaded) == size(feature_set)
 
@@ -115,5 +124,4 @@ const FEATURE_SETS =
             @test length(features) == size(feature_set, 2)
         end
     end
-
 end
