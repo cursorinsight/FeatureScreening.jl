@@ -49,6 +49,15 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
+[[Dumper]]
+deps = ["Dates", "MacroTools"]
+git-tree-sha1 = "29c72ebc1e7816e7eb44b01c50a14989f4b4cdc0"
+pinned = true
+repo-rev = "v0.2.0"
+repo-url = "https://github.com/cursorinsight/Dumper.jl"
+uuid = "8642fa86-e71c-4b93-8618-293c1d7e5bde"
+version = "0.2.0"
+
 [[HDF5]]
 deps = ["Blosc", "Compat", "HDF5_jll", "Libdl", "Mmap", "Random", "Requires"]
 git-tree-sha1 = "1d18a48a037b14052ca462ea9d05dee3ac607d23"
@@ -102,6 +111,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "5d494bc6e85c4c9b626ee0cab05daa4085486ab1"
 uuid = "5ced341a-0733-55b8-9ab6-a4889d929147"
 version = "1.9.3+0"
+
+[[MacroTools]]
+deps = ["Markdown", "Random"]
+git-tree-sha1 = "3d3e902b31198a27340d0bf00d6ac452866021cf"
+uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+version = "0.5.9"
 
 [[Markdown]]
 deps = ["Base64"]

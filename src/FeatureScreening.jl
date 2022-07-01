@@ -25,8 +25,9 @@ export load, save, id, labels, names, features
 
 # Utilities
 include("Utilities.jl")
-using FeatureScreening.Utilities: ExpStep, make_rng, @dump
+using FeatureScreening.Utilities: ExpStep, make_rng
 using Base.Iterators: partition
+using Dumper: @dump
 
 include("importance.jl")
 
@@ -135,8 +136,10 @@ function screen(feature_set::FeatureSet{L, N, F};
 
         to_be_selected::FeatureSet = merge(selected, new)
 
-        @dump "importances.$i.csv" importances::Vector{Pair{N, <: Real}} =
+        importances::Vector{Pair{N, <: Real}} =
             feature_importance(to_be_selected; config, rng)
+
+        @dump importances path="importances.$i.csv"
 
         important_names::Vector{<: N} =
             select(importances, Top(reduced_size); strict = false) .|> label

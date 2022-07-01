@@ -158,32 +158,6 @@ end
 
 function save end
 
-function save(; kwargs...)::Function
-    return x -> save(x; kwargs...)
-end
-
-function save(x; directory = ".")::Nothing
-    save(path(directory, x), x)
-    return nothing
-end
-
-function save(path::AbstractString, x)::Nothing
-    open(path, "w") do io
-        save(io, x)
-    end
-    return nothing
-end
-
-function save(io::IO, kvs::AbstractVector{<: Pair})::Nothing
-    println.(Ref(io), join.(kvs, "; "))
-    return nothing
-end
-
-function save(io::IO, x)::Nothing
-    println(io, x)
-    return nothing
-end
-
 ##------------------------------------------------------------------------------
 ## Load
 ##------------------------------------------------------------------------------
@@ -209,80 +183,6 @@ end
 
 function path(directory::AbstractString, x)::String
     return joinpath(directory, filename(x))
-end
-
-###-----------------------------------------------------------------------------
-### Dumping
-###-----------------------------------------------------------------------------
-# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/16
-
-"""
-`ENV` variable is the source of truth.
-"""
-function dumping!(enable::Bool)::Nothing
-    if enable
-        dumping!()
-    else
-        delete!(ENV, "DUMP")
-    end
-
-    return nothing
-end
-
-function dumping!(directory::AbstractString = ".")::Nothing
-    @assert ispath(directory)
-    ENV["DUMP"] = directory
-    return nothing
-end
-
-macro dump(arguments...)
-    return dump_expression(arguments...) |> esc
-end
-
-function dump_expression(arguments...)
-    return quote
-        $(dump_definition(arguments...))
-        if haskey(ENV, "DUMP")
-            mkpath(ENV["DUMP"])
-            $(dump_save_expression(arguments...))
-        end
-    end
-end
-
-function dump_definition(filename, object::O)::O where {O}
-    return object
-end
-
-function dump_definition(object::O)::O where {O}
-    return object
-end
-
-function dump_save_expression(object)::Expr
-    variable::Symbol = dump_variable(object)
-    return :($save($path(ENV["DUMP"], $variable), $variable))
-end
-
-function dump_save_expression(filename, object)::Expr
-    variable::Symbol = dump_variable(object)
-    return :($save($path(ENV["DUMP"], $filename), $variable))
-end
-
-function dump_variable(variable::Symbol)::Symbol
-    return variable
-end
-
-function dump_variable(expr::Expr)::Symbol
-    @assert expr.head == :(=)
-    object = expr.args[1]
-
-    if object isa Symbol                # case `x = 1`
-        return object
-    elseif object isa Expr              # case `x::Int = 1`
-        @assert object.head == :(::)
-        return object.args[1]
-    else                                # case "invalid"
-        throw(:invalid_variable_expression => object)
-    end
 end
 
 ###-----------------------------------------------------------------------------
