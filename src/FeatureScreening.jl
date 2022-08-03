@@ -17,7 +17,7 @@ export screen
 export FeatureSet
 
 # Types API
-export load, save, labels, names, features
+export load, save, id, labels, names, features
 
 ###=============================================================================
 ### Imports
@@ -33,7 +33,7 @@ include("importance.jl")
 # Feature set related
 include("Types.jl")
 using FeatureScreening.Types: FeatureSet
-using FeatureScreening.Types: names, load, save
+using FeatureScreening.Types: id, labels, names, features, load, save
 
 # Fixtures
 include("Fixtures.jl")
