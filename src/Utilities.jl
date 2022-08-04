@@ -1,7 +1,7 @@
 ###-----------------------------------------------------------------------------
-### Copyright (C) 2021- Cursor Insight
+### Copyright (C) FeatureScreening.jl
 ###
-### All rights reserved.
+### SPDX-License-Identifier: MIT License
 ###-----------------------------------------------------------------------------
 
 module Utilities
