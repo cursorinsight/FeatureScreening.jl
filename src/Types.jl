@@ -50,12 +50,16 @@ import Base: merge, rand
 ### Feature set
 ###=============================================================================
 
+##------------------------------------------------------------------------------
+## AbstractFeatureSet
+##------------------------------------------------------------------------------
+
 """
-    FeatureSet{L, N, F}
+    AbstractFeatureSet{L, N, F}
 
-This object contains feature values by given labels and feature names.
+Abstract base type for storing feature values by labels and feature names.
 
-# Parametric types:
+# Type parameters:
 
 - `L`: Type of the labels.
 - `N`: Type of the feature names.
@@ -70,9 +74,98 @@ This object contains feature values by given labels and feature names.
 |    ...    |     ...     |     ...     |   ...   |     ...     |
 | "label-M" |   131.349   |   134.119   |   ...   |   -0.1124   |
 | "label-M" |   128.218   |   329.218   |   ...   |   10.0038   |
+"""
+abstract type AbstractFeatureSet{L, N, F} end
+
+##------------------------------------------------------------------------------
+## Abstract API
+##------------------------------------------------------------------------------
+
+function labels(::AbstractFeatureSet) end
+function names(::AbstractFeatureSet) end
+function features(::AbstractFeatureSet) end
+function merge(::AbstractFeatureSet, ::AbstractFeatureSet) end
+
+function size(::AbstractFeatureSet) end
+function size(::AbstractFeatureSet, dim::Int) end
+function getindex(::AbstractFeatureSet, inds...) end
+
+##------------------------------------------------------------------------------
+## Default API implementations
+##------------------------------------------------------------------------------
+
+function show(io::IO, features::T)::Nothing where {T <: AbstractFeatureSet}
+    (height, width) = size(features)
+    print(io, "$(T)<$(height) × $(width)>")
+    return nothing
+end
+
+function ==(a::AbstractFeatureSet, b::AbstractFeatureSet)
+    return hash(a) == hash(b)
+end
+
+function hash(feature_set::AbstractFeatureSet, h::UInt64)::UInt64
+    parts = [labels(feature_set), names(feature_set), features(feature_set)]
+    return reduce(parts; init = h) do h, part
+        return hash(part, h)
+    end
+end
+
+function ndims(feature_set::AbstractFeatureSet)::Int
+    return ndims(features(feature_set))
+end
+
+function axes(feature_set::AbstractFeatureSet)::Tuple
+    return ntuple(i -> axes(feature_set, i), ndims(feature_set))
+end
+
+function merge(xs::AbstractFeatureSet...)
+    return reduce(merge, xs)
+end
+
+###-----------------------------------------------------------------------------
+### Research API
+###-----------------------------------------------------------------------------
+
+function build_forest(feature_set::AbstractFeatureSet; config = (;), kwargs...)
+    return __build_forest(labels(feature_set),
+                          features(feature_set);
+                          config,
+                          kwargs...)
+end
+
+function nfoldCV_forest(feature_set::AbstractFeatureSet;
+                        config = (;),
+                        verbose = false)
+    return __nfoldCV_forest(labels(feature_set),
+                            features(feature_set);
+                            config,
+                            verbose)
+end
+
+function feature_importance(feature_set::AbstractFeatureSet{_L, N};
+                            config = (;),
+                            kwargs...
+                           )::Vector{Pair{N, Int}} where {_L, N}
+    forest::RandomForest = build_forest(feature_set; config, kwargs...)
+    importances::Vector{Pair{Int, Int}} = feature_importance(forest)
+
+    return [names(feature_set)[i] => importance
+            for (i, importance) in importances]
+end
+
+##------------------------------------------------------------------------------
+## FeatureSet
+##------------------------------------------------------------------------------
 
 """
-@kwdef struct FeatureSet{L, N, F}
+    FeatureSet{L, N, F}
+
+Reference implementation of abstract base type `AbstractFeatureSet{L, N, F}`,
+for storing feature values by labels and feature names in a single, contiguous,
+in-memory matrix.
+"""
+@kwdef struct FeatureSet{L, N, F} <: AbstractFeatureSet{L, N, F}
     id::UUID = uuid4()
     created_at::DateTime = now(UTC)
 
@@ -113,8 +206,9 @@ end
 """
     FeatureSet(X, y)
 
-Create a `FeatureSet` from a feature matrix and labels. (Classic data science
-API)
+Create a `FeatureSet` from a feature matrix and vector of labels.
+
+Classic data science API.
 """
 function FeatureSet(X::AbstractMatrix{F},
                     y::AbstractVector{L};
@@ -154,23 +248,6 @@ end
 ### Base API
 ###-----------------------------------------------------------------------------
 
-function show(io::IO, features::FeatureSet{L, N, F})::Nothing where {L, N, F}
-    (height, width) = size(features)
-    print(io, "$(FeatureSet{L, N, F})<$(height) x $(width)>")
-    return nothing
-end
-
-function ==(a::FeatureSet, b::FeatureSet)
-    return hash(a) == hash(b)
-end
-
-function hash(feature_set::FeatureSet, h::UInt64)::UInt64
-    parts = [labels(feature_set), names(feature_set), features(feature_set)]
-    return reduce(parts; init = h) do h, part
-        return hash(part, h)
-    end
-end
-
 function getindex(feature_set::FeatureSet{L, N, F},
                   label_indices,
                   name_indices,
@@ -199,22 +276,9 @@ end
 ## Size API
 ##------------------------------------------------------------------------------
 
-function ndims(feature_set::FeatureSet)::Int
-    return ndims(features(feature_set))
-end
-
-function axes(feature_set::FeatureSet)::Tuple
-    return axes.(Ref(feature_set), size(feature_set))
-end
-
-function axes(feature_set::FeatureSet, dim::Int)
-    @assert dim in [1, 2]
-    if dim == 1
-        return 1:size(feature_set, 1)
-    elseif dim == 2
-        return names(feature_set)
-    end
-end
+axes(feature_set::FeatureSet, dim::Int) = axes(feature_set, Val(dim))
+axes(feature_set::FeatureSet, ::Val{1}) = 1:size(feature_set, 1)
+axes(feature_set::FeatureSet, ::Val{2}) = names(feature_set)
 
 function size(feature_set::FeatureSet)::Tuple{Int, Int}
     return size(features(feature_set))
@@ -248,40 +312,6 @@ end
 function eachcol(feature_set::FeatureSet)
     return zip(names(feature_set),
                eachcol(features(feature_set)))
-end
-
-###-----------------------------------------------------------------------------
-### Research API
-###-----------------------------------------------------------------------------
-
-function build_forest(feature_set::FeatureSet{L, N, F};
-                      config = (;),
-                      kwargs...
-                     ) where {L, N, F}
-    return __build_forest(labels(feature_set),
-                          features(feature_set);
-                          config,
-                          kwargs...)
-end
-
-function nfoldCV_forest(feature_set::FeatureSet;
-                        config = (;),
-                        verbose = false)
-    return __nfoldCV_forest(labels(feature_set),
-                            features(feature_set);
-                            config,
-                            verbose)
-end
-
-function feature_importance(feature_set::FeatureSet{L, N};
-                            config = (;),
-                            kwargs...
-                           )::Vector{Pair{N, Int}} where {L, N}
-    forest::RandomForest = build_forest(feature_set; config, kwargs...)
-    importances::Vector{Pair{Int, Int}} = feature_importance(forest)
-
-    return [names(feature_set)[i] => importance
-            for (i, importance) in importances]
 end
 
 ###-----------------------------------------------------------------------------
@@ -325,7 +355,7 @@ function load(::Type{FeatureSet}, path::AbstractString)::FeatureSet
 end
 
 ##------------------------------------------------------------------------------
-## Miscs
+## Miscellaneous functions
 ##------------------------------------------------------------------------------
 
 function filename(feature_set::FeatureSet)::String
@@ -386,13 +416,7 @@ function merge(a::FeatureSet, b::FeatureSet)::FeatureSet
                                       unique!([features(a).indices[2];
                                                features(b).indices[2]])))
 
-    return FeatureSet(labels(a),
-                      unique_names,
-                      unique_features)
-end
-
-function merge(xs::FeatureSet...)::FeatureSet
-    return reduce(merge, xs)
+    return FeatureSet(labels(a), unique_names, unique_features)
 end
 
 # TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/12

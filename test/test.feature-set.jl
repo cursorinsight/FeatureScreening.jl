@@ -84,11 +84,17 @@ using HDF5: ishdf5, h5open, File
     let feature_set = rand(FeatureSet, 80, 30)
         @test feature_set isa FeatureSet{Int, Int, Float64}
         @test size(feature_set) == (80, 30)
+        @test axes(feature_set, 1) == 1:80
+        @test axes(feature_set, 2) == 1:30
+        @test axes(feature_set) == (1:80, 1:30)
     end
 
     let feature_set = rand(FeatureSet{Char, Int, Float64}, 80, 30)
         @test feature_set isa FeatureSet{Char, Int, Float64}
         @test size(feature_set) == (80, 30)
+        @test axes(feature_set, 1) == 1:80
+        @test axes(feature_set, 2) == 1:30
+        @test axes(feature_set) == (1:80, 1:30)
     end
 
 end
