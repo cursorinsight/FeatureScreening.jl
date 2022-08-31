@@ -41,7 +41,7 @@ include("Fixtures.jl")
 
 # API dependencies
 using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
-using ProgressMeter: @showprogress
+using ProgressMeter: Progress, next!
 using FeatureScreening.Utilities: nfoldCV_forest, skip
 using Statistics: mean
 
@@ -119,6 +119,7 @@ function screen(feature_set::FeatureSet{L, N, F};
                 shuffle::Bool               = false,
                 before::Function            = skip,
                 after::Function             = skip,
+                show_progress::Bool         = true,
                 rng::Union{AbstractRNG, Integer} = GLOBAL_RNG
                )::FeatureSet{L, N, F} where {L, N, F}
     all::Vector{N} = names(feature_set)
@@ -128,7 +129,11 @@ function screen(feature_set::FeatureSet{L, N, F};
 
     selected::FeatureSet = feature_set[:, N[]]
 
-    @showprogress "Screen" for (i, part) in enumerate(partition(all, step_size))
+    parts = partition(all, step_size)
+    progress = Progress(length(parts);
+                        desc = "Screening...",
+                        enabled = show_progress)
+    for (i, part) in enumerate(parts)
         new::FeatureSet = feature_set[:, part]
 
         # Before the computation
@@ -148,6 +153,8 @@ function screen(feature_set::FeatureSet{L, N, F};
 
         # After the computation
         after(selected)
+
+        next!(progress)
     end
 
     return selected

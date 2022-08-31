@@ -100,7 +100,8 @@ const FEATURE_SETS =
 @testset "Save and load $name" for (name, feature_set) in FEATURE_SETS
     mktempdir() do directory::String
         # Save
-        save(feature_set; directory)
+        @test_logs (:info, "Created file") save(feature_set; directory)
+
         path = "$directory/$(id(feature_set)).hdf5"
 
         # File storage content

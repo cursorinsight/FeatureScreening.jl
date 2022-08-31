@@ -27,7 +27,8 @@ using FeatureScreening: screen
         selected = screen(fixture(:feature_set);
                           reduced_size  = REDUCED_SIZE,
                           step_size     = STEP_SIZE,
-                          config        = fixture(:config, :screen))
+                          config        = fixture(:config, :screen),
+                          show_progress = false)
 
         @test selected isa FeatureSet{Symbol, String, Float64}
         @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)
@@ -46,7 +47,8 @@ using FeatureScreening: screen
                           fixture(:y);
                           reduced_size  = REDUCED_SIZE,
                           step_size     = STEP_SIZE,
-                          config        = fixture(:config, :screen))
+                          config        = fixture(:config, :screen),
+                          show_progress = false)
 
         @test selected isa FeatureSet{Symbol, Int, Float64}
         @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)
