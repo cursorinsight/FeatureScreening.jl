@@ -14,7 +14,7 @@ module FeatureScreening
 export screen
 
 # Types
-export FeatureSet
+export AbstractFeatureSet, FeatureSet
 
 # Types API
 export load, save, id, labels, names, features
