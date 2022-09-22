@@ -14,7 +14,7 @@ module FeatureScreening
 export screen
 
 # Types
-export FeatureSet
+export AbstractFeatureSet, FeatureSet
 
 # Types API
 export load, save, id, labels, names, features
@@ -33,7 +33,7 @@ include("importance.jl")
 
 # Feature set related
 include("Types.jl")
-using FeatureScreening.Types: FeatureSet
+using FeatureScreening.Types: AbstractFeatureSet, FeatureSet
 using FeatureScreening.Types: id, labels, names, features, load, save
 
 # Fixtures
@@ -41,7 +41,7 @@ include("Fixtures.jl")
 
 # API dependencies
 using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
-using ProgressMeter: @showprogress
+using ProgressMeter: Progress, next!
 using FeatureScreening.Utilities: nfoldCV_forest, skip
 using Statistics: mean
 
@@ -61,34 +61,34 @@ const DEFAULT_SCREEN_CONFIG =
 """
     screen(feature_set...; configuration...)::FeatureSet
 
-Screening input feature set by the given configuration. This function produces a
-new `FeatureSet` despite the type of the input feature set.
+Screen input feature set with the given configuration. Create a new `FeatureSet`
+irrespective the type of the input feature set.
 
-**WARNING**: This function can run for a long time, elapsing time is
-proportional to the number of features and depends on the internal ranking
-random forest configuration.
+**WARNING**: This function can run for a long time, proportional to the number
+of features, largely depending on the configuration of the random forests used
+for ranking the features internally.
 
-**DISCLAIMER**: Internal ranking, importance computation is random forest based.
-Potential future improvement is to add some other ranking methods.
+**DISCLAIMER**: Internal ranking, importance computation is based on random
+forests. Potential future improvement is to add other ranking methods.
 
 # Steps:
-0. Optionally shuffle the features,
-1. slice them into (fixed size, disjoint) partitions,
-2. then iterate over the partitions
 
-    1. to compute importances from the given partition,
-    2. and hold the bests,
-    3. which will be assigned to the next partition (GOTO 2.1).
+0. shuffle the features (optional);
+1. slice feature into (fixed size, disjoint) partitions;
+2. iterate over the partitions to:
 
-3. Finally returns all the remaining bests when all the partitions were
-   processed.
+    1. compute importances for the given partition;
+    2. keep the best features (with the highest importance);
+    3. merge these with the next partition, and continue with step 2.1.
+
+3. return the last set of best features when all the partitions were processed.
 """
 function screen(feature_set...; kwargs...)
     return screen(FeatureSet(feature_set...); kwargs...)
 end
 
 """
-    screen(feature_set::FeatureSet;
+    screen(feature_set::AbstractFeatureSet;
            reduced_size::Integer            = size(feature_set, 2) ÷ 5,
            step_size::Integer               = size(feature_set, 2) ÷ 10,
            config::NamedTuple               = DEFAULT_SCREEN_CONFIG,
@@ -96,7 +96,7 @@ end
            before::Function                 = skip,
            after::Function                  = skip,
            rng::Union{AbstractRNG, Integer} = GLOBAL_RNG
-          )::FeatureSet
+          )::AbstractFeatureSet
 
 # Parameters:
 - `reduced_size`: Expected number of screened features (Right now, this is an
@@ -112,29 +112,35 @@ end
   selection part. Inputs are the selected features, output will be ignored.
 - `rng`: Random generator or a seed.
 """
-function screen(feature_set::FeatureSet{L, N, F};
+function screen(feature_set::AbstractFeatureSet{L, N, F};
                 reduced_size::Integer       = size(feature_set, 2) ÷ 5,
                 step_size::Integer          = size(feature_set, 2) ÷ 10,
                 config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
                 shuffle::Bool               = false,
                 before::Function            = skip,
                 after::Function             = skip,
+                show_progress::Bool         = true,
                 rng::Union{AbstractRNG, Integer} = GLOBAL_RNG
-               )::FeatureSet{L, N, F} where {L, N, F}
-    all::Vector{N} = names(feature_set)
+               )::AbstractFeatureSet{L, N, F} where {L, N, F}
+
+    all::AbstractVector{N} = names(feature_set)
     if shuffle
-        __shuffle(make_rng(rng), all)
+        all = __shuffle(make_rng(rng), all)
     end
 
-    selected::FeatureSet = feature_set[:, N[]]
+    selected::AbstractFeatureSet = feature_set[:, N[]]
 
-    @showprogress "Screen" for (i, part) in enumerate(partition(all, step_size))
-        new::FeatureSet = feature_set[:, part]
+    parts = partition(all, step_size)
+    progress = Progress(length(parts);
+                        desc = "Screening...",
+                        enabled = show_progress)
+    for (i, part) in enumerate(parts)
+        new::AbstractFeatureSet = feature_set[:, part]
 
         # Before the computation
         before(selected, new)
 
-        to_be_selected::FeatureSet = merge(selected, new)
+        to_be_selected::AbstractFeatureSet = merge(selected, new)
 
         importances::Vector{Pair{N, <: Real}} =
             feature_importance(to_be_selected; config, rng)
@@ -148,6 +154,8 @@ function screen(feature_set::FeatureSet{L, N, F};
 
         # After the computation
         after(selected)
+
+        next!(progress)
     end
 
     return selected

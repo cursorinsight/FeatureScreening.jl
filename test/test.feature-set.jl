@@ -8,10 +8,11 @@
 ### Imports
 ###=============================================================================
 
+using Base: ReshapedArray
 using FeatureScreening.Types: FeatureSet
 using FeatureScreening.Utilities: id
 using FeatureScreening.Types: labels, names, features
-using FeatureScreening.Types: save, load
+using FeatureScreening.Types: save, load, isvalid
 using HDF5: ishdf5, h5open, File
 
 ###=============================================================================
@@ -84,11 +85,17 @@ using HDF5: ishdf5, h5open, File
     let feature_set = rand(FeatureSet, 80, 30)
         @test feature_set isa FeatureSet{Int, Int, Float64}
         @test size(feature_set) == (80, 30)
+        @test axes(feature_set, 1) == 1:80
+        @test axes(feature_set, 2) == 1:30
+        @test axes(feature_set) == (1:80, 1:30)
     end
 
     let feature_set = rand(FeatureSet{Char, Int, Float64}, 80, 30)
         @test feature_set isa FeatureSet{Char, Int, Float64}
         @test size(feature_set) == (80, 30)
+        @test axes(feature_set, 1) == 1:80
+        @test axes(feature_set, 2) == 1:30
+        @test axes(feature_set) == (1:80, 1:30)
     end
 
 end
@@ -100,22 +107,20 @@ const FEATURE_SETS =
 @testset "Save and load $name" for (name, feature_set) in FEATURE_SETS
     mktempdir() do directory::String
         # Save
-        save(feature_set; directory)
+        @test_logs (:info, "Created file") save(feature_set; directory)
+
         path = "$directory/$(id(feature_set)).hdf5"
 
         # File storage content
         @test isfile(path)
         @test ishdf5(path)
-
-        h5open(path, "r") do f
-            @test f isa File
-            @test ["id", "created_at", "names", "labels", "features"] ⊆ keys(f)
-        end
+        @test isvalid(FeatureSet, path)
 
         # Load
         loaded::FeatureSet = load(FeatureSet, path)
         @test feature_set isa FeatureSet
         @test size(loaded) == size(feature_set)
+        @test features(loaded) isa Matrix{Float64}
 
         for (label, features) in loaded
             @test label isa Int
@@ -123,5 +128,25 @@ const FEATURE_SETS =
             @test features isa AbstractVector{Float64}
             @test length(features) == size(feature_set, 2)
         end
+    end
+end
+
+@testset "Mmapped IO" begin
+    mktemp() do path, io
+        close(io)
+
+        # anything smaller than 300×300 does not get memory mapped
+        feature_set = rand(FeatureSet, 300, 300)
+        save(path, feature_set)
+
+        # File storage content
+        @test isfile(path)
+        @test ishdf5(path)
+        @test isvalid(FeatureSet, path)
+
+        loaded::FeatureSet = load(FeatureSet, path; mmap = true)
+        @test feature_set isa FeatureSet
+        @test size(loaded) == size(feature_set)
+        @test features(loaded) isa ReshapedArray{Float64, 2}
     end
 end
