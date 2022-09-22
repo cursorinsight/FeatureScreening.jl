@@ -51,12 +51,12 @@ uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
 [[Dumper]]
 deps = ["Dates", "MacroTools"]
-git-tree-sha1 = "29c72ebc1e7816e7eb44b01c50a14989f4b4cdc0"
+git-tree-sha1 = "e4e0d86524062938c8e7ff54980b0c8d3a134472"
 pinned = true
-repo-rev = "v0.2.0"
+repo-rev = "v0.2.1"
 repo-url = "https://github.com/cursorinsight/Dumper.jl"
 uuid = "8642fa86-e71c-4b93-8618-293c1d7e5bde"
-version = "0.2.0"
+version = "0.2.1"
 
 [[HDF5]]
 deps = ["Blosc", "Compat", "HDF5_jll", "Libdl", "Mmap", "Random", "Requires"]
