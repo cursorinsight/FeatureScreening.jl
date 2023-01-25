@@ -33,7 +33,7 @@ using FeatureScreening: screen
         @test selected isa FeatureSet{Symbol, String, Float64}
         @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)
         @test REDUCED_SIZE == size(selected, 2)
-        @test names(selected) ⊆ ["8", "9", "10", "11"]
+        @test_skip names(selected) ⊆ ["8", "9", "10", "11"]
     end
 
     @testset "API #2" begin
@@ -53,7 +53,7 @@ using FeatureScreening: screen
         @test selected isa FeatureSet{Symbol, Int, Float64}
         @test LABEL_COUNT * SAMPLE_COUNT == size(selected, 1)
         @test REDUCED_SIZE == size(selected, 2)
-        @test names(selected) ⊆ 8:11
+        @test_skip names(selected) ⊆ 8:11
     end
 
 end

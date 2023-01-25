@@ -16,6 +16,10 @@ using DecisionTree:
     Node,
     Leaf
 
+using Random:
+    AbstractRNG,
+    GLOBAL_RNG
+
 ###=============================================================================
 ### Implementation
 ###=============================================================================
@@ -155,20 +159,23 @@ end
 
 Select the `size` part randomly from the collection.
 
-    Random(ratio::Real)
+    Random(ratio::Real[, rng::AbstractRNG])
 
-Select the `ratio` portion randomly from the collection.
+Select the `ratio` portion randomly from the collection, using `rng`.
 """
-struct Random{T <: Real} <: Selector
+struct Random{T <: Real, R <: AbstractRNG} <: Selector
     size::T
+    rng::R
 end
+
+Random(size::Real) = Random(size, GLOBAL_RNG)
 
 function select(collection::AbstractVector{T},
                 selector::Random;
                 strict::Bool = true
                )::Vector{T} where {T}
     count::Integer = get_count(collection, selector.size; strict)
-    return rand(collection, count)
+    return rand(selector.rng, collection, count)
 end
 
 ##------------------------------------------------------------------------------
