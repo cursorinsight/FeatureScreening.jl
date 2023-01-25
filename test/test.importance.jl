@@ -12,6 +12,7 @@ using FeatureScreening: feature_importance
 using FeatureScreening.Types: FeatureSet, names
 using FeatureScreening: select, Top, Random, IndexBased, get_count
 using FeatureScreening: label, importance
+using StableRNGs: StableRNG
 
 ###=============================================================================
 ### Testcases
@@ -79,9 +80,10 @@ using FeatureScreening: label, importance
                                33 => 1]
 
         # Random selector method
-        let result = select(feature_importances, Random(3)) .|> label
+        let result = select(feature_importances,
+                            Random(3, StableRNG(1))) .|> label
             @test result isa Vector{Int}
-            @test result == [123, 33, 4]
+            @test result == [33, 123, 4]
         end
 
         # Random selector in strict mode
@@ -91,16 +93,17 @@ using FeatureScreening: label, importance
 
         # Random selector without strict mode
         let result = select(feature_importances,
-                            Random(10);
+                            Random(10, StableRNG(1));
                             strict = false) .|> label
             @test result isa Vector{Int}
-            @test result == [4, 4, 33, 123]
+            @test result == [33, 123, 4, 33]
         end
 
         # Random ratio selector method
-        let result = select(feature_importances, Random(0.77)) .|> label
+        let result = select(feature_importances,
+                            Random(0.77, StableRNG(1))) .|> label
             @test result isa Vector{Int}
-            @test result == [4, 33, 4]
+            @test result == [33, 123, 4]
         end
 
         # Random ratio selector in strict mode
@@ -110,10 +113,10 @@ using FeatureScreening: label, importance
 
         # Random ratio selector without strict mode
         let result = select(feature_importances,
-                            Random(3.1);
+                            Random(3.1, StableRNG(1));
                             strict = false) .|> label
             @test result isa Vector{Int}
-            @test result == [3, 33, 3, 123]
+            @test result == [33, 123, 4, 33]
         end
     end
 
