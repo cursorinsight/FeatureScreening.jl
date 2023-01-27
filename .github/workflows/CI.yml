@@ -17,20 +17,25 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   build:
+    strategy:
+      matrix:
+        # Test with Julia 1.6 (lowest compat version) and latest Julia 1.*
+        julia-version: ["1.6", "1"]
+
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Setup Julia environment
         uses: julia-actions/setup-julia@v1
-        with: 
-          version: 1.6
-          
+        with:
+          version: ${{ matrix.julia-version }}
+
       - name: Run Pkg.build
         uses: julia-actions/julia-buildpkg@v1
-          
+
       - name: Run Julia package tests
         uses: julia-actions/julia-runtest@v1
