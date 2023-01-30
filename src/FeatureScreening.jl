@@ -145,7 +145,7 @@ function screen(feature_set::AbstractFeatureSet{L, N, F};
         importances::Vector{Pair{N, <: Real}} =
             feature_importance(to_be_selected; config, rng)
 
-        @dump importances path="importances.$i.csv"
+        @dump importances path="importances.$i.csv" mime=MIME("text/csv")
 
         important_names::Vector{<: N} =
             select(importances, Top(reduced_size); strict = false) .|> label
