@@ -1,11 +1,12 @@
 name = "FeatureScreening"
 uuid = "81355843-3c2b-48ff-a0b2-a7573f067e8f"
 authors = ["Cursor Insight <info@cursorinsight.com>"]
-version = "0.19.2"
+version = "0.20.0"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DecisionTree = "7806a523-6efd-50cb-b5f6-3fa6f1930dbb"
+DocOpt = "968ba79b-81e4-546f-ab3a-2eecfa62a9db"
 Dumper = "8642fa86-e71c-4b93-8618-293c1d7e5bde"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -15,4 +16,9 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
-julia = "1.6"
+DecisionTree = "0.10"
+DocOpt = "0.5"
+Dumper = "0.2.1"
+HDF5 = "0.15"
+ProgressMeter = "1"
+julia = "1.6.2"
