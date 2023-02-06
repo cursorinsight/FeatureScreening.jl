@@ -140,7 +140,9 @@ julia> names(fs) # return the name vector of the feature set
 julia> features(fs) # return the feature matrix of the feature set
 ```
 
-A `FeatureSet` can be stored and loaded to/from a [HDF5][] file:
+### HDF5 persistence
+
+A `FeatureSet` can be written to and loaded from a [HDF5][] file:
 
 ```julia
 julia> save("feature_sets/saved.hdf5", fs)
@@ -151,6 +153,58 @@ julia> fs = load(FeatureSet, "feature_sets/$(fs_id).hdf5")
 The `load` function accepts an optional `mmap` keyword argument. If that is set
 to `true`, the feature matrix is memory mapped instead of fully loaded into the
 memory, which can be useful (and significantly faster) for large feature sets.
+
+The following HDF5 datasets are written to (and expected to be readable from)
+the file:
+
+* `created_at` (datetime formatted string): timestamp of the time of creation;
+* `id` (string): a UUID of the feature set;
+* `labels` (vector of *L* items): sample class labels;
+* `names` (vector of *N* items): feature names;
+* `features` (matrix of *L* rows and *N* columns): feature values.
+
+### CLI interface
+
+The repository contains a Julia script called `screen.jl`, which provides a
+simple CLI interface for screening. Input is read from a HDF5 file, output is
+written to another, all other parameters are provided as command line switches,
+with sensible defaults. The parameters should be self-explanatory.
+
+```
+$ ./screen.jl --help
+Usage:
+  screen.jl [options] INPUT [OUTPUT]
+  screen.jl --help | --version
+
+Perform screening on a feature set. Both the input and the output files are HDF5
+feature set files.
+
+Arguments:
+  INPUT   HDF5 file to read features from
+  OUTPUT  HDF5 file to write screened features to [default: "screened-" + INPUT]
+
+Options:
+      --help                   show this screen
+      --version                show version
+      --random-seed=SEED       use random seed for deterministic output
+      --random-features=N      number of random features (implies shuffle) [default: 0]
+  -r, --reduced-size=SIZE      number of target features [default: 200]
+      --shuffle                shuffle features before screening
+  -s, --step-size=SIZE         number of features to add per step [default: 2000]
+  -v, --verbosity=LEVEL        set level of verbosity [default: 0]
+      --n-subfeatures=N        [default: -1]
+      --n-trees=N              [default: 1000]
+      --partial-sampling=N     [default: 0.9]
+      --max-depth=N            [default: -1]
+      --min-samples-leaf=N     [default: 10]
+      --min-samples-split=N    [default: 10]
+      --min-purity-increase=N  [default: 0.0]
+```
+
+Setting verbosity of 1 makes the screener dump the current rankings after every
+iteration into CSV files in a subdirectory named similarly to the output file
+(without the extension). Setting verbosity to 2 makes the script save the
+intermediate states into HDF5 files, too (under the same directory).
 
 ## Notes
 
