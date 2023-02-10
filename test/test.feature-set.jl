@@ -100,6 +100,48 @@ using HDF5: ishdf5, h5open, File
 
 end
 
+@testset "merge" begin
+    fs1 = FeatureSet(1:2, [:a, :b, :c], [1 2 3; 4 5 6])
+
+    # merging subsets
+    let merged = merge(fs1[1:2, [:a]], fs1[1:2, [:b, :c]])
+        @test merged == fs1
+    end
+
+    # merging overlapping subsets
+    let merged = merge(fs1[1:2, [:a, :b]], fs1[1:2, [:b, :c]])
+        @test merged == fs1
+    end
+
+    # merging with self and merging two identical feature sets
+    @test merge(fs1, fs1) == fs1
+    @test merge(fs1, deepcopy(fs1)) == fs1
+
+    # merging two disjunct feature sets
+    let fs2 = FeatureSet(1:2, [:d, :e], [7 8; 9 10]),
+        merged = merge(fs1, fs2)
+        @test labels(merged) == 1:2
+        @test names(merged) == [:a, :b, :c, :d, :e]
+        @test features(merged) == [1 2 3 7 8; 4 5 6 9 10]
+    end
+
+    # merging two feature sets with shared features
+    let fs2 = FeatureSet(1:2, [:a, :b, :d], [1 2 7; 4 5 8]),
+        merged = merge(fs1, fs2)
+        @test labels(merged) == 1:2
+        @test names(merged) == [:a, :b, :c, :d]
+        @test features(merged) == [1 2 3 7; 4 5 6 8]
+    end
+
+    # merging two disjunct subsets
+    let fs2 = FeatureSet(1:2, [:d, :e], [7 8; 9 10]),
+        merged = merge(fs1[1:2, [:a, :b]], fs2[1:2, [:d]])
+        @test labels(merged) == 1:2
+        @test names(merged) == [:a, :b, :d,]
+        @test features(merged) == [1 2 7; 4 5 9]
+    end
+end
+
 const FEATURE_SETS =
     ["feature set" => rand(FeatureSet, 50, 30; label_count = 10),
      "feature subset" => rand(FeatureSet, 50, 30; label_count = 10)[:, 1:5]]

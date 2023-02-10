@@ -400,20 +400,35 @@ end
 ### Others
 ###-----------------------------------------------------------------------------
 
-# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/13
-function merge(a::FeatureSet, b::FeatureSet)::FeatureSet
-    @assert labels(a) == labels(b)
-    @assert features(a) isa SubArray
-    @assert features(b) isa SubArray
-    @assert features(a).parent === features(b).parent
+function merge(a::FS, b::FS)::FS where {FS <: FeatureSet}
+    return a === b ? a :
+        parent(features(a)) === parent(features(b)) ?
+        merge_subarrays(a, b) :
+        merge_(a, b)
+end
 
-    unique_names::Vector = [names(a); names(b)] |> unique!
-    unique_features::AbstractMatrix =
-        SubArray(features(a).parent, (features(a).indices[1],
-                                      unique!([features(a).indices[2];
-                                               features(b).indices[2]])))
-
+function merge_subarrays(a::FeatureSet, b::FeatureSet)::FeatureSet
+    (a_rows, a_cols) = parentindices(features(a))
+    (b_rows, b_cols) = parentindices(features(b))
+    @assert a_rows == b_rows
+    unique_features::AbstractArray =
+        view(parent(features(a)), a_rows, unique!([a_cols; b_cols]))
+    unique_names::Vector = unique!([names(a); names(b)])
     return FeatureSet(labels(a), unique_names, unique_features)
+end
+
+function merge_(a::FeatureSet, b::FeatureSet)::FeatureSet
+    @assert labels(a) == labels(b)
+    common_names::Vector = names(a) ∩ names(b)
+    @assert(features(a)[:, resolve_name_indices(a, common_names)] ==
+        features(b)[:, resolve_name_indices(b, common_names)],
+            "Identically named features with different values!")
+
+    only_b_names::Vector = setdiff(names(b), names(a))
+    only_b_cols = resolve_name_indices(b, only_b_names)
+    return FeatureSet(labels(a),
+                      vcat(names(a), only_b_names),
+                      hcat(features(a), features(b)[:, only_b_cols]))
 end
 
 # TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/12
