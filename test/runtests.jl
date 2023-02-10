@@ -9,13 +9,20 @@
 ###=============================================================================
 
 using Test
-using FeatureScreening.Fixtures: fixture
 using Random: seed!
 
 ###=============================================================================
 ### Tests
 ###=============================================================================
 
+# Fixtures
+include("Fixtures.jl")
+using .Fixtures: fixture
+
+# pad test summaries to equal length
+Test.get_alignment(::Test.DefaultTestSet, ::Int) = 30
+
+# fixed random seed
 seed!(1)
 
 include("test.utilities.jl")

@@ -36,9 +36,6 @@ include("Types.jl")
 using FeatureScreening.Types: AbstractFeatureSet, FeatureSet
 using FeatureScreening.Types: id, labels, names, features, load, save
 
-# Fixtures
-include("Fixtures.jl")
-
 # API dependencies
 using Compat: Returns
 using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
