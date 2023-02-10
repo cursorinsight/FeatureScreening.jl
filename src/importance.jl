@@ -64,29 +64,15 @@ function feature_importance(features...;
     return importances
 end
 
-function fold(f, node::Node; init)
-    init = f(init, node)
-    init = fold(f, node.left; init = init)
-    init = fold(f, node.right; init = init)
-    return init
-end
-
-function fold(f, leaf::Leaf; init)
-    return f(init, leaf)
-end
-
 """
     feature_importance(forest::RandomForest)
 
-This function contains only the 2. and 3. steps.
+This method contains the 2. and 3. steps only.
 """
 function feature_importance(forest::RandomForest)::Vector{Pair{Int, Int}}
     # 2. step
     occurrences::Dict{Int, Int} =
-        foldl(forest.trees;
-              init = Dict{Int, Int}()) do occurrences, tree
-            return fold(accumulate_id!, tree; init = occurrences)
-        end
+        fold(accumulate_id!, forest;  init = Dict{Int, Int}())
 
     # 3. step
     importances::Vector{Pair{Int, Int}} =
@@ -95,8 +81,25 @@ function feature_importance(forest::RandomForest)::Vector{Pair{Int, Int}}
     return importances
 end
 
+function fold(f, forest::RandomForest; init)
+    return foldl(forest.trees; init) do occurrences, tree
+        return fold(f, tree; init = occurrences)
+    end
+end
+
+function fold(f, node::Node; init)
+    init = f(init, node)
+    init = fold(f, node.left; init)
+    init = fold(f, node.right; init)
+    return init
+end
+
+function fold(f, leaf::Leaf; init)
+    return f(init, leaf)
+end
+
 function accumulate_id!(occurrences::Dict{Int, Int}, node::Node)::Dict{Int, Int}
-    occurrences[node.featid] = get!(occurrences, node.featid, 0) + 1;
+    occurrences[node.featid] = get(occurrences, node.featid, 0) + 1;
     return occurrences
 end
 
