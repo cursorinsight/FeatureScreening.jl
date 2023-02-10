@@ -25,7 +25,7 @@ export load, save, id, labels, names, features
 
 # Utilities
 include("Utilities.jl")
-using FeatureScreening.Utilities: ExpStep, make_rng
+using FeatureScreening.Utilities: make_rng
 using Base.Iterators: partition
 using Dumper: @dump
 

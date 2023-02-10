@@ -10,9 +10,6 @@ module Utilities
 ### Imports
 ###=============================================================================
 
-# Range steps
-import Base: length, steprange_last, iterate
-
 # `DecisionTree` wrappers
 using DecisionTree: Ensemble as RandomForest
 using DecisionTree: build_forest, nfoldCV_forest
@@ -30,64 +27,6 @@ using Random: AbstractRNG, GLOBAL_RNG, MersenneTwister
 ###=============================================================================
 ### API
 ###=============================================================================
-
-###-----------------------------------------------------------------------------
-### Range steps
-###-----------------------------------------------------------------------------
-
-# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/14
-abstract type AbstractStep end
-
-##------------------------------------------------------------------------------
-## Exponential range step
-##------------------------------------------------------------------------------
-
-# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/15
-struct ExpStep{T} <: AbstractStep
-    base::T
-
-    function ExpStep(base::T) where {T}
-        @assert 1 < base
-        return new{T}(base)
-    end
-end
-
-function length(range::StepRange{Int, <: ExpStep})
-    return range.stop - range.start + 1
-end
-
-function (::Colon)(start::Real, step::S, stop::Real) where {S <: ExpStep}
-    return StepRange{Int, S}(ceil(Int, log(step.base, start)), step, stop)
-end
-
-function steprange_last(start, step::ExpStep, stop)
-    if iszero(stop)
-        return -1
-    else
-        return floor(Int, log(step.base, stop))
-    end
-end
-
-function iterate(range::StepRange{Int, ExpStep{Int}}, state = nothing)
-    if state isa Nothing
-        state = range.start
-    end
-    state > range.stop && return nothing
-
-    return (Int(range.step.base ^ float(state)), state+1)
-end
-
-##------------------------------------------------------------------------------
-## Fix size range step
-##------------------------------------------------------------------------------
-
-struct Size{T}
-    n::T
-end
-
-function (::Colon)(start::Real, size::S, stop::Real) where {S <: Size}
-    return range(start, stop; length = size.n)
-end
 
 ###-----------------------------------------------------------------------------
 ### `DecisionTree` wrappers
