@@ -91,7 +91,10 @@ function show(io::IO, features::T)::Nothing where {T <: AbstractFeatureSet}
 end
 
 function ==(a::AbstractFeatureSet, b::AbstractFeatureSet)
-    return hash(a) == hash(b)
+    return typeof(a) == typeof(b) &&
+        labels(a) == labels(b) &&
+        names(a) == names(b) &&
+        features(a) == features(b)
 end
 
 function hash(feature_set::AbstractFeatureSet, h::UInt64)::UInt64
@@ -208,7 +211,6 @@ end
                id::UUID = uuid4(),
                created_at::DateTime = now(UTC)
               )::FeatureSet{L, N, F} where {L, N, F}
-
 """
 function FeatureSet(labels::AbstractVector{L},
                     names::AbstractVector{N},
