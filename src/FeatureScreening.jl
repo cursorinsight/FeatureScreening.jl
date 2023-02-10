@@ -40,9 +40,10 @@ using FeatureScreening.Types: id, labels, names, features, load, save
 include("Fixtures.jl")
 
 # API dependencies
+using Compat: Returns
 using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
 using ProgressMeter: Progress, next!
-using FeatureScreening.Utilities: nfoldCV_forest, skip
+using FeatureScreening.Utilities: nfoldCV_forest
 using Statistics: mean
 
 ###=============================================================================
@@ -93,8 +94,8 @@ end
            step_size::Integer               = size(feature_set, 2) ÷ 10,
            config::NamedTuple               = DEFAULT_SCREEN_CONFIG,
            shuffle::Bool                    = false,
-           before::Function                 = skip,
-           after::Function                  = skip,
+           before::Function                 = Returns(nothing),
+           after::Function                  = Returns(nothing),
            rng::Union{AbstractRNG, Integer} = GLOBAL_RNG
           )::AbstractFeatureSet
 
@@ -117,8 +118,8 @@ function screen(feature_set::AbstractFeatureSet{L, N, F};
                 step_size::Integer          = size(feature_set, 2) ÷ 10,
                 config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
                 shuffle::Bool               = false,
-                before::Function            = skip,
-                after::Function             = skip,
+                before::Function            = Returns(nothing),
+                after::Function             = Returns(nothing),
                 show_progress::Bool         = true,
                 rng::Union{AbstractRNG, Integer} = GLOBAL_RNG
                )::AbstractFeatureSet{L, N, F} where {L, N, F}

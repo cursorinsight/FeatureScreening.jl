@@ -40,10 +40,11 @@ Options:
 ### Imports
 ###=============================================================================
 
+using Compat: Returns
 using DocOpt: docopt
 using Dumper: enable!
 using FeatureScreening: FeatureSet, labels, features, names
-using FeatureScreening: load, save, screen, skip
+using FeatureScreening: load, save, screen
 using Random: GLOBAL_RNG, MersenneTwister
 
 ###=============================================================================
@@ -92,7 +93,7 @@ after = if verbosity >= 2
         end
     end
 else
-    skip
+    Returns(nothing)
 end
 
 screened_fs = screen(fs; reduced_size, step_size, config, after, shuffle, rng)

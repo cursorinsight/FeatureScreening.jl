@@ -197,10 +197,6 @@ function make_rng(seed::Integer)::AbstractRNG
     return MersenneTwister(seed)
 end
 
-function skip(args...; kwargs...)::Nothing
-    return nothing
-end
-
 const FILENAME_DATETIME_FORMAT = "YYYYmmdd-HHMMSS"
 
 end # module
