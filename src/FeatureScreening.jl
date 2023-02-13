@@ -126,14 +126,14 @@ function screen(feature_set::AbstractFeatureSet{L, N, F};
         all = __shuffle(make_rng(rng), all)
     end
 
-    selected::AbstractFeatureSet = feature_set[:, N[]]
+    selected::AbstractFeatureSet = @view feature_set[:, N[]]
 
     parts = partition(all, step_size)
     progress = Progress(length(parts);
                         desc = "Screening...",
                         enabled = show_progress)
     for (i, part) in enumerate(parts)
-        new::AbstractFeatureSet = feature_set[:, part]
+        new::AbstractFeatureSet = @view feature_set[:, part]
 
         # Before the computation
         before(selected, new)
@@ -148,7 +148,7 @@ function screen(feature_set::AbstractFeatureSet{L, N, F};
         important_names::Vector{<: N} =
             select(importances, Top(reduced_size); strict = false) .|> label
 
-        selected = to_be_selected[:, important_names]
+        selected = @view to_be_selected[:, important_names]
 
         # After the computation
         after(selected)

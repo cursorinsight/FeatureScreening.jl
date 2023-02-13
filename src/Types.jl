@@ -20,7 +20,7 @@ import FeatureScreening.Utilities: id
 import Base: names
 
 ### Base API
-import Base: show, ==, hash, getindex
+import Base: show, ==, hash, getindex, view, parent
 
 ## Size API
 import Base: ndims, axes, size, length
@@ -42,6 +42,7 @@ using HDF5: create_dataset, dataspace, datatype, readmmap
 
 ### Others
 import Base: merge, rand
+using FeatureScreening.Utilities: Maybe, @unimplemented
 
 ###=============================================================================
 ### AbstractFeatureSet
@@ -74,11 +75,13 @@ abstract type AbstractFeatureSet{L, N, F} end
 ## Abstract API
 ##------------------------------------------------------------------------------
 
-function labels(::AbstractFeatureSet) end
-function names(::AbstractFeatureSet) end
-function features(::AbstractFeatureSet) end
-function merge(::AbstractFeatureSet, ::AbstractFeatureSet) end
-function getindex(::AbstractFeatureSet, inds...) end
+@unimplemented function labels(::AbstractFeatureSet) end
+@unimplemented function names(::AbstractFeatureSet) end
+@unimplemented function features(::AbstractFeatureSet) end
+@unimplemented function merge(::AbstractFeatureSet, ::AbstractFeatureSet) end
+@unimplemented function getindex(::AbstractFeatureSet, inds...) end
+@unimplemented function view(::AbstractFeatureSet, inds...) end
+parent(fs::AbstractFeatureSet) = fs
 
 ##------------------------------------------------------------------------------
 ## Base API
@@ -86,7 +89,9 @@ function getindex(::AbstractFeatureSet, inds...) end
 
 function show(io::IO, features::T)::Nothing where {T <: AbstractFeatureSet}
     (height, width) = size(features)
-    print(io, "$(T)<$(height) × $(width)>")
+    print(io,
+          "$(T)<$(height) × $(width)>",
+          parent(features) !== features ? " view" : "")
     return nothing
 end
 
@@ -202,6 +207,7 @@ for storing feature values by labels and feature names in a matrix.
     features::AbstractMatrix{F}
 
     __name_indices::Dict{N, Int}
+    __parent::Maybe{FeatureSet} = nothing
 end
 
 """
@@ -278,29 +284,43 @@ function axes(feature_set::FeatureSet, dim::Int)::AbstractVector
     return dim == 2 ? names(feature_set) : axes(features(feature_set), dim)
 end
 
-function getindex(feature_set::FeatureSet{L, N},
-                  label_indices::Union{Colon, AbstractVector{<: Int}},
-                  name_indices::Union{Colon, AbstractVector{<: N}}
-                 )::FeatureSet{L, N} where {L, N}
-    i = label_indices
-    j = resolve_name_indices(feature_set, name_indices)
+IndexType{T} = Union{<: T, AbstractVector{<: T}, Colon}
 
-    return FeatureSet(view(labels(feature_set), i),
-                      view(names(feature_set), j),
-                      view(features(feature_set), i, j))
-end
+for lookup in [:getindex, :view]
+    kwargs = lookup == :view ? [:(:__parent => feature_set)] : []
+    @eval function $lookup(feature_set::FeatureSet{L, N},
+                           label_index::IndexType{Integer},
+                           name_index::IndexType{N}) where {L, N}
+        rows = label_index
+        cols = resolve_name_index(feature_set, name_index)
 
-function resolve_name_indices(feature_set::FeatureSet, ::Colon)::Colon
-    return (:)
-end
+        if rows isa Integer || cols isa Integer
+            return $lookup(features(feature_set), rows, cols)
+        end
 
-function resolve_name_indices(feature_set::FeatureSet{_L, N},
-                              names::AbstractVector{<: N}
-                             )::Vector{Int} where {_L, N}
-    return map(names) do name::N
-        return feature_set.__name_indices[name]
+        return FeatureSet($lookup(labels(feature_set), rows),
+                          $lookup(names(feature_set), cols),
+                          $lookup(features(feature_set), rows, cols);
+                          $(kwargs...))
     end
 end
+
+function resolve_name_index(feature_set::FeatureSet, ::Colon)::Colon
+    return (:)
+end
+function resolve_name_index(feature_set::FeatureSet{_L, N},
+                            name::N
+                           )::Int where {_L, N}
+    return feature_set.__name_indices[name]
+end
+
+function resolve_name_index(feature_set::FeatureSet{_L, N},
+                            names::AbstractVector{<: N}
+                           )::Vector{Int} where {_L, N}
+    return resolve_name_index.(Ref(feature_set), names)
+end
+
+parent(fs::FeatureSet) = something(fs.__parent, fs)
 
 ###-----------------------------------------------------------------------------
 ### File API
@@ -402,8 +422,7 @@ end
 
 function merge(a::FS, b::FS)::FS where {FS <: FeatureSet}
     return a === b ? a :
-        parent(features(a)) === parent(features(b)) ?
-        merge_subarrays(a, b) :
+        parent(a) === parent(b) ? merge_subarrays(a, b) :
         merge_(a, b)
 end
 
@@ -411,21 +430,24 @@ function merge_subarrays(a::FeatureSet, b::FeatureSet)::FeatureSet
     (a_rows, a_cols) = parentindices(features(a))
     (b_rows, b_cols) = parentindices(features(b))
     @assert a_rows == b_rows
-    unique_features::AbstractArray =
-        view(parent(features(a)), a_rows, unique!([a_cols; b_cols]))
-    unique_names::Vector = unique!([names(a); names(b)])
-    return FeatureSet(labels(a), unique_names, unique_features)
+    unique_cols = unique!([a_cols; b_cols])
+    unique_features = view(features(parent(a)), a_rows, unique_cols)
+    unique_names = view(names(parent(a)), unique_cols)
+    return FeatureSet(labels(a),
+                      unique_names,
+                      unique_features;
+                      __parent = parent(a))
 end
 
 function merge_(a::FeatureSet, b::FeatureSet)::FeatureSet
     @assert labels(a) == labels(b)
     common_names::Vector = names(a) ∩ names(b)
-    @assert(features(a)[:, resolve_name_indices(a, common_names)] ==
-        features(b)[:, resolve_name_indices(b, common_names)],
+    @assert(features(a)[:, resolve_name_index(a, common_names)] ==
+        features(b)[:, resolve_name_index(b, common_names)],
             "Identically named features with different values!")
 
     only_b_names::Vector = setdiff(names(b), names(a))
-    only_b_cols = resolve_name_indices(b, only_b_names)
+    only_b_cols = resolve_name_index(b, only_b_names)
     return FeatureSet(labels(a),
                       vcat(names(a), only_b_names),
                       hcat(features(a), features(b)[:, only_b_cols]))

@@ -10,6 +10,8 @@ module Utilities
 ### Imports
 ###=============================================================================
 
+using MacroTools: combinedef, rmlines, splitdef
+
 # `DecisionTree` wrappers
 using DecisionTree: Ensemble as RandomForest
 using DecisionTree: build_forest, nfoldCV_forest
@@ -27,6 +29,15 @@ using Random: AbstractRNG, GLOBAL_RNG, MersenneTwister
 ###=============================================================================
 ### API
 ###=============================================================================
+
+macro unimplemented(function_definition::Expr)
+    def = splitdef(function_definition)
+    @assert(rmlines(def[:body]) == Expr(:block), "Function definition of " *
+        "@unimplemented $(def[:name]) has a non-empty body!")
+    def[:body] = :(error("Unimplemented method: ",
+                         $(string(function_definition.args[1]))))
+    return esc(combinedef(def))
+end
 
 ###-----------------------------------------------------------------------------
 ### `DecisionTree` wrappers

@@ -23,63 +23,87 @@ using HDF5: ishdf5, h5open, File
 
     let feature_set = FeatureSet([1, 1, 1, 2, 2, 2, 3, 3, 3],
                                  "feature" .* ('1':'4'),
-                                 [10 11 12 13;
-                                  11 11 12 13;
-                                  13 12 11 12;
-                                  21 20 23 24;
-                                  22 21 22 23;
-                                  21 22 22 22;
-                                  33 32 31 32;
-                                  31 34 31 34;
-                                  39 30 30 32]),
+                                 [10 11 12 13
+                                  11 11 12 13
+                                  13 12 11 12
+                                  21 20 23 24
+                                  22 21 22 23
+                                  21 22 22 22
+                                  33 32 31 32
+                                  31 34 31 34
+                                  39 30 30 32])
 
-        feature_subset = feature_set[:, ["feature2", "feature3", "feature4"]]
-        @test feature_subset isa FeatureSet
-        @test labels(feature_subset) == [1, 1, 1, 2, 2, 2, 3, 3, 3]
-        @test names(feature_subset) == ["feature2", "feature3", "feature4"]
-        @test features(feature_subset) == [11 12 13;
-                                           11 12 13;
-                                           12 11 12;
-                                           20 23 24;
-                                           21 22 23;
-                                           22 22 22;
-                                           32 31 32;
-                                           34 31 34;
-                                           30 30 32]
-        @test [(1, [11, 12, 13]),
-               (1, [11, 12, 13]),
-               (1, [12, 11, 12]),
-               (2, [20, 23, 24]),
-               (2, [21, 22, 23]),
-               (2, [22, 22, 22]),
-               (3, [32, 31, 32]),
-               (3, [34, 31, 34]),
-               (3, [30, 30, 32])
-              ] == collect(eachrow(feature_subset))
+        # scalar indexing returns feature value
+        @test feature_set[2, "feature3"] == 12
+        @test feature_set[8, "feature4"] == 34
 
-        feature_subset2 = feature_subset[1:5, ["feature2", "feature3"]]
-        @test feature_subset2 isa FeatureSet
-        @test labels(feature_subset2) == [1, 1, 1, 2, 2]
-        @test names(feature_subset2) == ["feature2", "feature3"]
-        @test features(feature_subset2) == [11 12;
-                                           11 12;
-                                           12 11;
-                                           20 23;
-                                           21 22]
-        @test [(1, [11, 12]),
-               (1, [11, 12]),
-               (1, [12, 11]),
-               (2, [20, 23]),
-               (2, [21, 22])
-              ] == collect(eachrow(feature_subset2))
+        # combination of scalar and vector/colon indexing returns vector
+        @test feature_set[3, ["feature2", "feature3"]] == [12, 11]
+        @test feature_set[4, :] == [21, 20, 23, 24]
+        @test feature_set[5:6, "feature1"] == [22, 21]
+        @test feature_set[:, "feature1"] == [10, 11, 13, 21, 22, 21, 33, 31, 39]
 
-        feature_subset3 = feature_subset[:, :]
-        @test feature_subset3 isa FeatureSet
-        @test feature_subset == feature_subset3
+        # indexing with two vectors returns FeatureSet (subset)
+        @testset for (isview, feature_subset) in
+            [(false, feature_set[:, ["feature2", "feature3", "feature4"]])
+             (true, @view feature_set[:, ["feature2", "feature3", "feature4"]])]
 
-        feature_subset4 = feature_subset3[1:end, :]
-        @test feature_subset4 isa FeatureSet
-        @test feature_subset3 == feature_subset4
+            @test feature_subset isa FeatureSet
+            @test labels(feature_subset) == [1, 1, 1, 2, 2, 2, 3, 3, 3]
+            @test names(feature_subset) == ["feature2", "feature3", "feature4"]
+            @test features(feature_subset) == [11 12 13
+                                               11 12 13
+                                               12 11 12
+                                               20 23 24
+                                               21 22 23
+                                               22 22 22
+                                               32 31 32
+                                               34 31 34
+                                               30 30 32]
+
+            @test isview == (feature_subset.__parent isa FeatureSet)
+            @test isview == (labels(feature_subset) isa SubArray)
+            @test isview == (names(feature_subset) isa SubArray)
+            @test isview == (features(feature_subset) isa SubArray)
+
+            @test [(1, [11, 12, 13]),
+                   (1, [11, 12, 13]),
+                   (1, [12, 11, 12]),
+                   (2, [20, 23, 24]),
+                   (2, [21, 22, 23]),
+                   (2, [22, 22, 22]),
+                   (3, [32, 31, 32]),
+                   (3, [34, 31, 34]),
+                   (3, [30, 30, 32])
+                  ] == collect(eachrow(feature_subset))
+
+            @testset for feature_subset2 in
+                [feature_subset[1:5, ["feature2", "feature3"]]
+                 @view feature_subset[1:5, ["feature2", "feature3"]]]
+                @test feature_subset2 isa FeatureSet
+                @test labels(feature_subset2) == [1, 1, 1, 2, 2]
+                @test names(feature_subset2) == ["feature2", "feature3"]
+                @test features(feature_subset2) == [11 12;
+                                                    11 12;
+                                                    12 11;
+                                                    20 23;
+                                                    21 22]
+                @test [(1, [11, 12]),
+                       (1, [11, 12]),
+                       (1, [12, 11]),
+                       (2, [20, 23]),
+                       (2, [21, 22])
+                      ] == collect(eachrow(feature_subset2))
+            end
+
+            feature_subset3 = feature_subset[:, :]
+            @test feature_subset3 isa FeatureSet
+            @test feature_subset == feature_subset3
+
+            feature_subset4 = @view feature_subset3[1:end, :]
+            @test feature_subset4 isa FeatureSet
+            @test feature_subset3 == feature_subset4
+        end
     end
 
     let feature_set = rand(FeatureSet, 80, 30)
@@ -103,13 +127,23 @@ end
 @testset "merge" begin
     fs1 = FeatureSet(1:2, [:a, :b, :c], [1 2 3; 4 5 6])
 
-    # merging subsets
+    # merging subsets (views and copies)
+    let merged = merge(view(fs1, 1:2, [:a]), view(fs1, 1:2, [:b, :c]))
+        @test merged.__parent === fs1
+        @test merged == fs1
+    end
     let merged = merge(fs1[1:2, [:a]], fs1[1:2, [:b, :c]])
+        @test merged.__parent === nothing
         @test merged == fs1
     end
 
-    # merging overlapping subsets
+    # merging overlapping subsets (views and copies)
+    let merged = merge(view(fs1, 1:2, [:a, :b]), view(fs1, 1:2, [:b, :c]))
+        @test merged.__parent === fs1
+        @test merged == fs1
+    end
     let merged = merge(fs1[1:2, [:a, :b]], fs1[1:2, [:b, :c]])
+        @test merged.__parent === nothing
         @test merged == fs1
     end
 
@@ -159,16 +193,36 @@ const FEATURE_SETS =
         @test isvalid(FeatureSet, path)
 
         # Load
-        loaded::FeatureSet = load(FeatureSet, path)
-        @test feature_set isa FeatureSet
-        @test size(loaded) == size(feature_set)
-        @test features(loaded) isa Matrix{Float64}
+        let loaded::FeatureSet = load(FeatureSet, path)
+            @test loaded isa FeatureSet
+            @test loaded == feature_set
+            @test size(loaded) == size(feature_set)
+            @test features(loaded) isa Matrix{Float64}
 
-        for (label, features) in loaded
-            @test label isa Int
-            @test label in labels(feature_set)
-            @test features isa AbstractVector{Float64}
-            @test length(features) == size(feature_set, 2)
+            for (label, features) in loaded
+                @test label isa Int
+                @test label in labels(feature_set)
+                @test features isa AbstractVector{Float64}
+                @test length(features) == size(feature_set, 2)
+            end
+        end
+
+        # Save view
+        fsv = view(feature_set, 1:2, 1:2)
+        @assert parent(fsv) == feature_set
+        @test_logs (:info, "Created file") save(fsv; directory)
+
+        path = "$directory/$(id(fsv)).hdf5"
+
+        @test isfile(path)
+        @test ishdf5(path)
+        @test isvalid(FeatureSet, path)
+
+        # Load
+        let loaded = load(FeatureSet, path)
+            @test loaded isa FeatureSet
+            @test loaded.__parent == nothing
+            @test loaded == fsv
         end
     end
 end
