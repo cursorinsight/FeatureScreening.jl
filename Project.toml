@@ -1,7 +1,7 @@
 name = "FeatureScreening"
 uuid = "81355843-3c2b-48ff-a0b2-a7573f067e8f"
 authors = ["Cursor Insight <info@cursorinsight.com>"]
-version = "0.20.0"
+version = "0.21.0"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
