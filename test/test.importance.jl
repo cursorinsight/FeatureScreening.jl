@@ -10,8 +10,8 @@
 
 using FeatureScreening: feature_importance
 using FeatureScreening.Types: FeatureSet, names
-using FeatureScreening: select, Top, Random, IndexBased, get_count
-using FeatureScreening: label, importance
+using FeatureScreening: SelectTop, SelectRandom, SelectByImportance
+using FeatureScreening: select, get_count, label, importance
 using StableRNGs: StableRNG
 
 ###=============================================================================
@@ -28,132 +28,165 @@ using StableRNGs: StableRNG
         @test all(0 .< importance.(feature_importances))
     end
 
-    @testset "Selection -- Top" begin
+    @testset "SelectTop" begin
         feature_importances = [4 => 12,
                                3 => 11,
                                123 => 3,
                                33 => 1]
 
-        # Top count selector method
-        let result = select(feature_importances, Top(3)) .|> label
+        # Top count selection method
+        let result = select(feature_importances, SelectTop(3)) .|> label
             @test result isa Vector{Int}
             @test result == [4, 3, 123]
         end
 
-        # Top count selector method in strict mode
+        # Top count selection method in strict mode
         @test_throws AssertionError select(feature_importances,
-                                           Top(10);
-                                           strict = true) .|> label
+                                           SelectTop(10; strict = true))
 
-        # Top count selector method without strict mode
+        # Top count selection method without strict mode
         let result = select(feature_importances,
-                            Top(10);
-                            strict = false) .|> label
+                            SelectTop(10; strict = false)) .|> label
             @test result isa Vector{Int}
             @test result == [4, 3, 123, 33]
         end
 
-        # Top ratio selector method
-        let result = select(feature_importances, Top(0.25)) .|> label
+        # Top ratio selection method
+        let result = select(feature_importances, SelectTop(0.25)) .|> label
             @test result isa Vector{Int}
             @test result == [4]
         end
 
-        # Top ratio selector method in strict mode
+        # Top ratio selection method in strict mode
         @test_throws AssertionError select(feature_importances,
-                                           Top(3.1);
-                                           strict = true) .|> label
+                                           SelectTop(3.1; strict = true))
 
-        # Top ratio selector method without strict mode
+        # Top ratio selection method without strict mode
         let result = select(feature_importances,
-                            Top(3.1);
-                            strict = false) .|> label
+                            SelectTop(3.1; strict = false)) .|> label
             @test result isa Vector{Int}
             @test result == [4, 3, 123, 33]
         end
     end
 
-    @testset "Selection -- Random" begin
+    @testset "SelectRandom" begin
         feature_importances = [4 => 12,
                                3 => 11,
                                123 => 3,
                                33 => 1]
 
-        # Random selector method
-        let result = select(feature_importances,
-                            Random(3, StableRNG(1))) .|> label
+        # Random selection method
+        let result = select(StableRNG(2),
+                            feature_importances,
+                            SelectRandom(3)) .|> label
             @test result isa Vector{Int}
-            @test result == [33, 123, 4]
+            @test result == [4, 3, 33]
         end
 
-        # Random selector in strict mode
+        # Random selection in strict mode
         @test_throws AssertionError select(feature_importances,
-                                           Random(10);
-                                           strict = true) .|> label
+                                           SelectRandom(10; strict = true))
 
-        # Random selector without strict mode
-        let result = select(feature_importances,
-                            Random(10, StableRNG(1));
-                            strict = false) .|> label
+        # Random selection without strict mode
+        let result = select(StableRNG(2),
+                            feature_importances,
+                            SelectRandom(10; strict = false)) .|> label
             @test result isa Vector{Int}
-            @test result == [33, 123, 4, 33]
+            @test result == label.(feature_importances)
         end
 
-        # Random ratio selector method
-        let result = select(feature_importances,
-                            Random(0.77, StableRNG(1))) .|> label
+        # Random selection method with replacement
+        let result = select(StableRNG(1),
+                            feature_importances,
+                            SelectRandom(3; replace = true)) .|> label
             @test result isa Vector{Int}
-            @test result == [33, 123, 4]
+            @test result == [4, 123, 123]
         end
 
-        # Random ratio selector in strict mode
+        # Random ratio selection method
+        let result = select(StableRNG(2),
+                            feature_importances,
+                            SelectRandom(0.77)) .|> label
+            @test result isa Vector{Int}
+            @test result == [4, 3, 33]
+        end
+
+        # Random ratio selection in strict mode
         @test_throws AssertionError select(feature_importances,
-                                           Random(3.1);
-                                           strict = true) .|> label
+                                           SelectRandom(3.1; strict = true))
 
-        # Random ratio selector without strict mode
-        let result = select(feature_importances,
-                            Random(3.1, StableRNG(1));
-                            strict = false) .|> label
+        # Random ratio selection without strict mode
+        let result = select(StableRNG(2),
+                            feature_importances,
+                            SelectRandom(3.1; strict = false)) .|> label
             @test result isa Vector{Int}
-            @test result == [33, 123, 4, 33]
+            @test result == label.(feature_importances)
+        end
+
+        # Random ratio selection method with replacement
+        let result = select(StableRNG(1),
+                            feature_importances,
+                            SelectRandom(0.77; replace = true)) .|> label
+            @test result isa Vector{Int}
+            @test result == [4, 123, 123]
         end
     end
 
-    @testset "Selection -- IndexBased" begin
+    @testset "SelectByImportance" begin
         feature_importances = [4 => 12,
                                3 => 11,
                                123 => 3,
-                               33 => 1,
-                               5 => 1,
-                               7 => 1,
-                               9 => 0]
+                               33 => 1]
 
-        # Index based selector method
-        let result = select(feature_importances,
-                            IndexBased([3, 1, 2, 1])) .|> label
+        # Weighted random selection method
+        let result = select(StableRNG(2),
+                            feature_importances,
+                            SelectByImportance(3)) .|> label
             @test result isa Vector{Int}
-            @test result == [123, 4, 3, 4]
+            @test result == [4, 3, 123]
         end
 
-        # Index based selector method
-        let result = select(feature_importances, IndexBased(2:2:6)) .|> label
-            @test result isa Vector{Int}
-            @test result == [3, 33, 7]
-        end
-
-        # Index based selector method in strict mode
+        # Weighted random selection in strict mode
         @test_throws AssertionError select(feature_importances,
-                                           IndexBased(1:100);
-                                           strict = true) .|> label
+                                           SelectByImportance(10;
+                                                              strict = true))
 
-        # Index based selector method without strict mode
-        let result = select(feature_importances,
-                            IndexBased(1:100);
-                            strict = false) .|> label
+        # Weighted random selection without strict mode
+        let result = select(StableRNG(2),
+                            feature_importances,
+                            SelectByImportance(10; strict = false)) .|> label
             @test result isa Vector{Int}
-            @test result == [4, 3, 123, 33, 5, 7, 9]
+            @test result == label.(feature_importances)
         end
+
+        # Weighted random ratio selection method
+        let result = select(StableRNG(2),
+                            feature_importances,
+                            SelectByImportance(0.77)) .|> label
+            @test result isa Vector{Int}
+           @test result == [4, 3, 123]
+        end
+
+        # Weighted random ratio selection in strict mode
+        @test_throws AssertionError select(feature_importances,
+                                           SelectByImportance(3.1;
+                                                              strict = true))
+
+        # Weighted random ratio selection without strict mode
+        let result = select(StableRNG(2),
+                            feature_importances,
+                            SelectByImportance(3.1; strict = false)) .|> label
+            @test result isa Vector{Int}
+            @test result == label.(feature_importances)
+        end
+    end
+
+    @testset "ComposedSelectionMode" begin
+        result = select(1:100, SelectRandom(10) ∘ SelectTop(50))
+        @test length(result) == 10
+        @test all(<=(50), result)
+        @test issorted(result)
+        @test result != 1:10
     end
 
     @testset "Selection utility -- Get count" begin

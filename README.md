@@ -68,23 +68,32 @@ The third signature uses the *de facto* standard data science API, expecting an
 
 The optional keyword parameters (`options`) of all three methods are:
 
-- `reduced_size::Integer`: Expected number of screened features (right now, this
-  is an upper bound).
-- `step_size::Integer`: Size of each partition.
+- `reduced_size::Integer`: Expected number of screened features (an upper
+  bound); defaults to 1/5th of the number of features. Mutually exclusive with
+  `selection_mode`.
+- `step_size::Integer`: Size of each partition; defaults to 1/10th of the number
+  of features.
+- `selection_mode::SelectionMode`: a mode to pick selected features after
+  importance computation. Mutually exclusive with `reduced_size`. For various
+  selection modes, see details below.
 - `config::NamedTuple`: Parameters of the random forest used for importance
-  computation in each round.
+  computation in each round; with sensible defaults (see `DEFAULT_SCREEN_CONFIG`
+  in the source code for details).
 - `shuffle::Bool`: Whether to shuffle the features before partitioning.
-- `before::Function`: Callback function, which is executed before importance
+- `before::Function`: Callback function, that is executed before importance
   computation and feature selection. It is called with the previously selected
-  features and the actual partition, its return value is ignored.
-- `after::Function`: Callback function, which is executed after importance
+  features and the current partition, its return value is ignored.
+- `after::Function`: Callback function, that is executed after importance
   computation and feature selection. It is called with the selected features,
   its return value is ignored.
 - `rng::Union{AbstractRNG, Integer}`: Random generator or seed to be used.
 
-Note that this function can run for a long time, elapsing time is proportional
-to the number of features and samples, and depends on the forest configuration
-as well.
+Specifying `reduced_size` is equivalent to passing `SelectTop(reduced_size;
+strict = false)` in the `selection_mode` parameter. Both options cannot be
+specified simultaneously.
+
+Note that this function can run for a long time. Runtime is proportional to the
+number of features and samples, and depends on the forest configuration as well.
 
 ```julia
 # Returns a FeatureSet with the screened feature set
@@ -97,6 +106,42 @@ julia> selected_features = screen(X, # features
 julia> names(selected_features)
 julia> features(selected_features)
 ```
+
+### Selection modes
+
+A selection mode is an object encapsulating an item selection strategy. It
+controls the behavior of the `select()` function. Currently, the following
+selection modes are defined:
+
+* `SelectTop(n::Integer)`, `SelectTop(r::Real)`: take the top/first *n* items,
+  or the *r* ratio (0-1) of the total number of items, from the collection.
+
+* `SelectRandom([weights::Function,] n::Integer [; replace::Bool])`,
+  `SelectRandom([weights::Function,] r::Real [; replace::Bool])`: take *n*
+  random items, or the *r* ratio (0-1) of the total number of items, from the
+  collection, with replacement if `replace` is true (defaults to false). The
+  probability of picking a specific item is weighted according to the `weights`
+  function, which receives the collection, and must return a same length vector
+  of corresponding weights. By default, `unit_weights` is used, which assigns
+  equal weights to all items.
+
+* `SelectByImportance(n::Int)`: a specific `SelectRandom` take *n* random items
+  from a collection of `label => importance` pairs with no replacement, such
+  that the importance values serve as weights.
+
+* `ComposedSelectionMode(a, b)`, `a ∘ b`: composes two selection modes, such
+  that it performs selection with selection mode `b` first, and then applies
+  selection mode `a` on the outcome of the former.
+
+All selection modes also accept a `strict` keyword parameter (defaults to true).
+If this is set to true, trying to take more items from the collection than it
+contains results in an error. If `strict` is false, the specified number of
+items is considered an upper bound only, but it is silently clamped between the
+given boundaries.
+
+Custom selection modes may be defined by inheriting from the abstract type
+`SelectionMode`, and defining a method `select(rng::AbstractRNG,
+collection::AbstractVector, selection_mode)` to perform the item selection.
 
 ### `FeatureSet`
 

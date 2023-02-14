@@ -8,17 +8,12 @@
 ### Imports
 ###=============================================================================
 
-using FeatureScreening.Utilities:
-    build_forest
+using FeatureScreening.Utilities: build_forest
+using DecisionTree: Ensemble as RandomForest, Node, Leaf
+using Random: AbstractRNG, GLOBAL_RNG
+using StatsBase: sample, weights
 
-using DecisionTree:
-    Ensemble as RandomForest,
-    Node,
-    Leaf
-
-using Random:
-    AbstractRNG,
-    GLOBAL_RNG
+import Base: ∘, show, size
 
 ###=============================================================================
 ### Implementation
@@ -72,7 +67,7 @@ This method contains the 2. and 3. steps only.
 function feature_importance(forest::RandomForest)::Vector{Pair{Int, Int}}
     # 2. step
     occurrences::Dict{Int, Int} =
-        fold(accumulate_id!, forest;  init = Dict{Int, Int}())
+        fold(accumulate_id!, forest; init = Dict{Int, Int}())
 
     # 3. step
     importances::Vector{Pair{Int, Int}} =
@@ -99,7 +94,7 @@ function fold(f, leaf::Leaf; init)
 end
 
 function accumulate_id!(occurrences::Dict{Int, Int}, node::Node)::Dict{Int, Int}
-    occurrences[node.featid] = get(occurrences, node.featid, 0) + 1;
+    occurrences[node.featid] = get(occurrences, node.featid, 0) + 1
     return occurrences
 end
 
@@ -108,102 +103,163 @@ function accumulate_id!(occurrences::Dict{Int, Int}, ::Leaf)::Dict{Int, Int}
 end
 
 ###-----------------------------------------------------------------------------
-### Selection
+### Selection modes
 ###-----------------------------------------------------------------------------
 
-# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/20
-abstract type Selector end
+abstract type SelectionMode end
 
-"""
-    select(collection::AbstractVector, selector::Selector; strict::Bool = true)
+name(mode::SelectionMode) = string(nameof(mode))
 
-# Description
-Select by a specific selector from to given collection.
+size(mode::SelectionMode) = mode.size
 
-# Parameters
-- `collection`
-- `selector`
-- `strict`: flag to check the validity of the selection process, if `false` then
-  try to fix, otherwise let it crush
-"""
-function select end
+isstrict(mode::SelectionMode) = mode.strict
 
-##------------------------------------------------------------------------------
-## Top selector
-##------------------------------------------------------------------------------
-
-"""
-    Top(size::Int)
-
-Select the top `size` part of the collection.
-
-    Top(ratio::Real)
-
-Select the top `ratio` portion of the collection.
-"""
-struct Top{T <: Real} <: Selector
-    size::T
+function select(collection, mode::SelectionMode)
+    return select(GLOBAL_RNG, collection, mode)
 end
 
-function select(collection::AbstractVector{T},
-                selector::Top;
-                strict::Bool = true
+function show(io::IO, mode::SelectionMode)
+    print(io,
+          name(mode),
+          '(',
+          size(mode),
+          isstrict(mode) ? "" : "; strict = false",
+          ')')
+end
+
+##------------------------------------------------------------------------------
+## SelectTop
+##------------------------------------------------------------------------------
+
+"""
+    SelectTop(size::Int)
+
+Deterministically select the top `size` part of the collection.
+
+---
+
+    SelectTop(ratio::Real)
+
+Deterministically select the top `ratio` portion of the collection.
+"""
+struct SelectTop{T <: Real} <: SelectionMode
+    size::T
+    strict::Bool
+
+    function SelectTop(size::T; strict = true) where {T <: Real}
+        return new{T}(size, strict)
+    end
+end
+
+name(::SelectTop) = "SelectTop"
+
+function select(::AbstractRNG,
+                collection::AbstractVector{T},
+                mode::SelectTop
                )::Vector{T} where {T}
-    count::Integer = get_count(collection, selector.size; strict)
+    count = get_count(collection, mode.size; strict = mode.strict)
     return collection[begin:count]
 end
 
 ##------------------------------------------------------------------------------
-## Random selector
+## SelectRandom
 ##------------------------------------------------------------------------------
 
 """
-    Random(size::Int)
+    SelectRandom(size::Int [, weights_fn])
 
-Select the `size` part randomly from the collection.
+Select a `size` part randomly from the collection. Selection probabilities are
+proportional to weights.
 
-    Random(ratio::Real[, rng::AbstractRNG])
+---
 
-Select the `ratio` portion randomly from the collection, using `rng`.
+    SelectRandom(ratio::Real [, weights_fn])
+
+Select a `ratio` portion randomly from the collection. Selection probabilities
+are proportional to weights.
 """
-struct Random{T <: Real, R <: AbstractRNG} <: Selector
+struct SelectRandom{F <: Function, T <: Real} <: SelectionMode
+    weights::F
     size::T
-    rng::R
-end
+    strict::Bool
+    replace::Bool
 
-Random(size::Real) = Random(size, GLOBAL_RNG)
-
-function select(collection::AbstractVector{T},
-                selector::Random;
-                strict::Bool = true
-               )::Vector{T} where {T}
-    count::Integer = get_count(collection, selector.size; strict)
-    return rand(selector.rng, collection, count)
-end
-
-##------------------------------------------------------------------------------
-## Index based selector
-##------------------------------------------------------------------------------
-
-"""
-    IndexBased(indices::AbstractVector{T})
-
-Select simply by the given `indices`.
-"""
-struct IndexBased{T} <: Selector
-    indices::AbstractVector{T}
-end
-
-function select(collection::AbstractVector{T},
-                selector::IndexBased{I};
-                strict::Bool = true
-               )::AbstractVector{T} where {T, I}
-    if strict
-        @assert selector.indices ⊆ keys(collection)
-        return collection[selector.indices]
-    else
-        return collection[selector.indices ∩ keys(collection)]
+    function SelectRandom(weights::F,
+                           size::T;
+                           strict::Bool = true,
+                           replace::Bool = false) where {F <: Function,
+                                                         T <: Real}
+        return new{F, T}(weights, size, strict, replace)
     end
+end
+
+function SelectRandom(size::Real; kwargs...)
+    return SelectRandom(unit_weights, size; kwargs...)
+end
+
+name(::SelectRandom{F}) where {F} = "SelectRandom{$F}"
+
+function select(rng::AbstractRNG,
+                collection::AbstractVector{T},
+                mode::SelectRandom
+               )::Vector{T} where {T}
+    count = get_count(collection, mode.size; strict = mode.strict)
+    return sample(rng,
+                  collection,
+                  weights(mode.weights(collection)),
+                  count;
+                  replace = mode.replace,
+                  ordered = true)
+end
+
+unit_weights(v::AbstractVector) = fill(1, length(v))
+
+##------------------------------------------------------------------------------
+## SelectByImportance
+##------------------------------------------------------------------------------
+
+"""
+A specialized, weighted `SelectRandom` using importances as weights.
+
+`SelectByImportance` takes a vector of `feature => importance` pairs, and uses
+the importance values as weights to perform a random selection of the pairs,
+without replacement.
+"""
+function SelectByImportance(size::Real; strict::Bool = true)
+    return SelectRandom(importances, size; replace = false, strict)
+end
+
+"""
+    importances(feature_importances::AbstractVector{<: }Pair)::Vector
+
+Return the vector of importances from vector of feature importance pairs.
+"""
+function importances(feature_importances::AbstractVector{<: Pair})::Vector
+    return importance.(feature_importances)
+end
+
+name(::SelectRandom{typeof(importances)}) = "SelectByImportance"
+
+##------------------------------------------------------------------------------
+## ComposedSelectionMode
+##------------------------------------------------------------------------------
+
+struct ComposedSelectionMode{A <: SelectionMode,
+                             B <: SelectionMode} <: SelectionMode
+    a::A
+    b::B
+end
+
+function select(rng::AbstractRNG,
+                collection::AbstractVector,
+                mode::ComposedSelectionMode)
+    return select(rng, select(rng, collection, mode.b), mode.a)
+end
+
+∘(a::SelectionMode, b::SelectionMode) = ComposedSelectionMode(a, b)
+
+function show(io::IO, mode::ComposedSelectionMode)
+    print(io, "$(mode.a) ∘ $(mode.b)")
 end
 
 ##------------------------------------------------------------------------------
