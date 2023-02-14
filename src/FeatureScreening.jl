@@ -25,7 +25,7 @@ export load, save, id, labels, names, features
 
 # Utilities
 include("Utilities.jl")
-using FeatureScreening.Utilities: make_rng
+using FeatureScreening.Utilities: Maybe, make_rng
 using Base.Iterators: partition
 using Dumper: @dump
 
@@ -41,7 +41,7 @@ using Compat: Returns
 using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
 using ProgressMeter: Progress, next!
 using FeatureScreening.Utilities: nfoldCV_forest
-using Statistics: mean
+using StatsBase: mean
 
 ###=============================================================================
 ### API
@@ -87,39 +87,52 @@ end
 
 """
     screen(feature_set::AbstractFeatureSet;
-           reduced_size::Integer            = size(feature_set, 2) ÷ 5,
-           step_size::Integer               = size(feature_set, 2) ÷ 10,
-           config::NamedTuple               = DEFAULT_SCREEN_CONFIG,
-           shuffle::Bool                    = false,
-           before::Function                 = Returns(nothing),
-           after::Function                  = Returns(nothing),
-           rng::Union{AbstractRNG, Integer} = GLOBAL_RNG
+           reduced_size::Maybe{Integer}         = size(feature_set, 2) ÷ 5,
+           step_size::Integer                   = size(feature_set, 2) ÷ 10,
+           selection_mode::Maybe{SelectionMode} = nothing,
+           config::NamedTuple                   = DEFAULT_SCREEN_CONFIG,
+           shuffle::Bool                        = false,
+           before::Function                     = Returns(nothing),
+           after::Function                      = Returns(nothing),
+           rng::Union{AbstractRNG, Integer}     = GLOBAL_RNG
           )::AbstractFeatureSet
 
-# Parameters:
-- `reduced_size`: Expected number of screened features (Right now, this is an
-  upper bound).
+# Parameters
+
+- `reduced_size`: Expected number of screened features (an upper bound).
+  Mutually exclusive with `selection_mode`.
 - `step_size`: Size of each partition.
-- `config`: Random forest configuration of the importance computing.
-- `shuffle`: Flag to shuffle features before partition, to randomize the order
-  of the features.
-- `before`: Callback function, that executes before importance computation and
-  selection part. Inputs are the previously selected features and the actual
-  partition, output will be ignored.
-- `after`: Callback function, that executes after importance computation and
-  selection part. Inputs are the selected features, output will be ignored.
-- `rng`: Random generator or a seed.
+- `selection_mode`: a mode to pick selected features after importance
+  computation. Mutually exclusive with `reduced_size`. See subtypes of
+  `SelectionMode` For various selection modes.
+- `config`: Parameters of the random forest used for importance computation in
+  each round.
+- `shuffle`: Whether to shuffle the features before partitioning.
+- `before`: Callback function, that is executed before importance computation
+  and feature selection. It is called with the previously selected features and
+  the current partition, its return value is ignored.
+- `after`: Callback function, that is executed after importance computation and
+  feature selection. It is called with the selected features, its return value
+  is ignored.
+- `rng`: Random generator or seed to be used.
 """
 function screen(feature_set::AbstractFeatureSet{L, N, F};
-                reduced_size::Integer       = size(feature_set, 2) ÷ 5,
-                step_size::Integer          = size(feature_set, 2) ÷ 10,
-                config::NamedTuple          = DEFAULT_SCREEN_CONFIG,
-                shuffle::Bool               = false,
-                before::Function            = Returns(nothing),
-                after::Function             = Returns(nothing),
-                show_progress::Bool         = true,
-                rng::Union{AbstractRNG, Integer} = GLOBAL_RNG
+                reduced_size::Maybe{Integer}         = nothing,
+                step_size::Integer                   = size(feature_set, 2) ÷ 10,
+                selection_mode::Maybe{SelectionMode} = nothing,
+                config::NamedTuple                   = DEFAULT_SCREEN_CONFIG,
+                shuffle::Bool                        = false,
+                before::Function                     = Returns(nothing),
+                after::Function                      = Returns(nothing),
+                show_progress::Bool                  = true,
+                rng::Union{AbstractRNG, Integer}     = GLOBAL_RNG
                )::AbstractFeatureSet{L, N, F} where {L, N, F}
+
+    @assert reduced_size === nothing || selection_mode === nothing "At most " *
+        "one of `reduced_size` and `selection_mode` must be specified!"
+    reduced_size = something(reduced_size, size(feature_set, 2) ÷ 5)
+    selection_mode = something(selection_mode,
+                               SelectTop(reduced_size; strict = false))
 
     all::AbstractVector{N} = names(feature_set)
     if shuffle
@@ -146,7 +159,7 @@ function screen(feature_set::AbstractFeatureSet{L, N, F};
         @dump importances path="importances.$i.csv" mime=MIME("text/csv")
 
         important_names::Vector{<: N} =
-            select(importances, Top(reduced_size); strict = false) .|> label
+            select(rng, importances, selection_mode) .|> label
 
         selected = to_be_selected[:, important_names]
 
