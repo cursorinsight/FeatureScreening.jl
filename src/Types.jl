@@ -16,7 +16,6 @@ using UUIDs: UUID, uuid4
 using Dates: DateTime, now, UTC
 
 ### Getters
-import FeatureScreening.Utilities: id
 import Base: names
 
 ### Base API
@@ -35,8 +34,6 @@ using FeatureScreening.Utilities: __build_forest, __nfoldCV_forest
 import FeatureScreening: feature_importance
 
 ### File API
-import FeatureScreening.Utilities: save, load, id, created_at
-using FeatureScreening.Utilities: FILENAME_DATETIME_FORMAT
 using HDF5: h5open, File as HDF5File
 using HDF5: create_dataset, dataspace, datatype, readmmap
 

@@ -10,9 +10,8 @@
 
 using Base: ReshapedArray
 using FeatureScreening.Types: FeatureSet
-using FeatureScreening.Utilities: id
 using FeatureScreening.Types: labels, names, features
-using FeatureScreening.Types: save, load, isvalid
+using FeatureScreening.Types: save, load, id, isvalid
 using HDF5: ishdf5, h5open, File
 
 ###=============================================================================
