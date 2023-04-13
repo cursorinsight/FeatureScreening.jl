@@ -8,13 +8,13 @@
 ### Imports
 ###=============================================================================
 
-using FeatureScreening.Utilities: @with_pattern, @pattern
+using .Fixtures: @with_pattern, @pattern
 
 ###=============================================================================
 ### Tests
 ###=============================================================================
 
-@testset "Utilities" begin
+@testset "Fixtures" begin
     @with_pattern function f end
 
     @test f isa Function
@@ -35,9 +35,9 @@ using FeatureScreening.Utilities: @with_pattern, @pattern
     @test length(methods(f)) == 3
     @test hasmethod(f, Tuple{Val{:y}})
 
-    # Couldn't create pattern with return type assertion
+    # can't create pattern with return type assertion
     try
-        # TODO this is how you can catch exception from macro
+        # this is how you can catch exception from macro
         quote
             @pattern function f(:y)::Int
                 return 3
