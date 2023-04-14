@@ -1,6 +1,7 @@
 # FeatureScreening.jl
 
 [![CI](https://github.com/cursorinsight/FeatureScreening.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/cursorinsight/FeatureScreening.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/cursorinsight/FeatureScreening.jl/branch/master/graph/badge.svg?token=P59CK9SA1Z)](https://codecov.io/gh/cursorinsight/FeatureScreening.jl)
 
 FeatureScreening.jl is a Julia package that provides utilities for finding
 significant features in a feature set, based on their importance in
