@@ -7,6 +7,8 @@ FeatureScreening.jl is a Julia package that provides utilities for finding
 significant features in a feature set, based on their importance in
 classification.
 
+See paper under review on [arXiv](https://arxiv.org/abs/2305.15793).
+
 ## Context
 
 Generally speaking, a feature set consists of:
