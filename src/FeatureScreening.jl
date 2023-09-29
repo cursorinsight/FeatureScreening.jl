@@ -17,7 +17,7 @@ export screen
 export AbstractFeatureSet, FeatureSet
 
 # Types API
-export load, save, id, labels, names, features
+export id, labels, names, features, load, save
 
 ###=============================================================================
 ### Imports
@@ -26,22 +26,20 @@ export load, save, id, labels, names, features
 # Utilities
 include("Utilities.jl")
 using FeatureScreening.Utilities: Maybe, make_rng
-using Base.Iterators: partition
-using Dumper: @dump
 
 include("importance.jl")
 
-# Feature set related
+# FeatureSets
 include("Types.jl")
 using FeatureScreening.Types: AbstractFeatureSet, FeatureSet
 using FeatureScreening.Types: id, labels, names, features, load, save
 
 # API dependencies
+using Base.Iterators: partition
 using Compat: Returns
-using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
+using Dumper: @dump
 using ProgressMeter: Progress, next!
-using FeatureScreening.Utilities: nfoldCV_forest
-using StatsBase: mean
+using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
 
 ###=============================================================================
 ### API
@@ -94,6 +92,7 @@ end
            shuffle::Bool                        = false,
            before::Function                     = Returns(nothing),
            after::Function                      = Returns(nothing),
+           show_progress::Bool                  = true,
            rng::Union{AbstractRNG, Integer}     = GLOBAL_RNG
           )::AbstractFeatureSet
 
@@ -156,7 +155,7 @@ function screen(feature_set::AbstractFeatureSet{L, N, F};
         importances::Vector{Pair{N, <: Real}} =
             feature_importance(to_be_selected; config, rng)
 
-        @dump importances path="importances.$i.csv" mime=MIME("text/csv")
+        @dump importances path="importances.$i.csv" (mime = "text/csv")
 
         important_names::Vector{<: N} =
             select(make_rng(rng), importances, selection_mode) .|> label
