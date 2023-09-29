@@ -9,9 +9,10 @@
 ###=============================================================================
 
 using Base: ReshapedArray
-using FeatureScreening.Types: FeatureSet
+using FeatureScreening.Types: FeatureSet, RandomForest
 using FeatureScreening.Types: labels, names, features
 using FeatureScreening.Types: save, load, id, isvalid
+using FeatureScreening.Types: apply_forest, build_forest, confusion_matrix
 using HDF5: ishdf5, h5open, File
 
 ###=============================================================================
@@ -19,7 +20,6 @@ using HDF5: ishdf5, h5open, File
 ###=============================================================================
 
 @testset "`FeatureSet` function" begin
-
     let feature_set = FeatureSet([1, 1, 1, 2, 2, 2, 3, 3, 3],
                                  "feature" .* ('1':'4'),
                                  [10 11 12 13
@@ -120,7 +120,6 @@ using HDF5: ishdf5, h5open, File
         @test axes(feature_set, 2) == 1:30
         @test axes(feature_set) == (1:80, 1:30)
     end
-
 end
 
 @testset "merge" begin
@@ -244,4 +243,18 @@ end
         @test size(loaded) == size(feature_set)
         @test features(loaded) isa ReshapedArray{Float64, 2}
     end
+end
+
+@testset "DecisionTree API" begin
+    fs =  fixture(:feature_set)
+    forest = build_forest(fs)
+    @test forest isa RandomForest
+
+    preds = apply_forest(forest, fs)
+    @test preds isa Vector{Symbol}
+
+    cm = confusion_matrix(forest, fs)
+    @test cm.matrix isa Matrix{Int64}
+    @test cm.accuracy >= 0.8
+    @test cm.kappa >= 0.8
 end

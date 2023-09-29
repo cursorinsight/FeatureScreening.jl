@@ -30,6 +30,7 @@ import Base: iterate, eachrow, eachcol
 ### Research API
 using DecisionTree: Ensemble as RandomForest
 import DecisionTree: build_forest, nfoldCV_forest
+import DecisionTree: apply_forest, confusion_matrix
 using FeatureScreening.Utilities: __build_forest, __nfoldCV_forest
 import FeatureScreening: feature_importance
 
@@ -158,6 +159,13 @@ end
 ### Research API
 ###-----------------------------------------------------------------------------
 
+"""
+    build_forest(feature_set::AbstractFeatureSet; config::NamedTuple)
+
+Given a `feature_set`, build a random forest from its [`features`](@ref), using
+its [`labels`](@ref) as the target variable. The forest configuration is
+specified by `config`.
+"""
 function build_forest(feature_set::AbstractFeatureSet; config = (;), kwargs...)
     return __build_forest(labels(feature_set),
                           features(feature_set);
@@ -165,6 +173,13 @@ function build_forest(feature_set::AbstractFeatureSet; config = (;), kwargs...)
                           kwargs...)
 end
 
+"""
+    nfoldCV_forest(feature_set::AbstractFeatureSet; config::NamedTuple)
+
+Given a `feature_set`, perform an n-fold verification with random forests from
+its [`features`](@ref), using its [`labels`](@ref) as the target variable. The
+forest configuration is specified by `config`.
+"""
 function nfoldCV_forest(feature_set::AbstractFeatureSet;
                         config = (;),
                         verbose = false)
@@ -172,6 +187,35 @@ function nfoldCV_forest(feature_set::AbstractFeatureSet;
                             features(feature_set);
                             config,
                             verbose)
+end
+
+"""
+    apply_forest(forest::RandomForest,
+                 feature_set::AbstractFeatureSet;
+                 use_multithreading::Bool = false)
+
+Apply a random `forest` on the [`features`](@ref) of a `feature_set`. Return the
+vector of predicted labels.
+"""
+function apply_forest(forest::RandomForest,
+                      feature_set::AbstractFeatureSet;
+                      use_multithreading::Bool = false)
+    return apply_forest(forest, features(feature_set); use_multithreading)
+end
+
+"""
+    confusion_matrix(forest::RandomForest,
+                     feature_set::AbstractFeatureSet;
+                     use_multithreading::Bool = false)
+
+Apply a random `forest` on the [`features`](@ref) of a `feature_set`, and build
+a confusion matrix of the predictions and the ground truth [`labels`](@ref).
+"""
+function confusion_matrix(forest::RandomForest,
+                          feature_set::AbstractFeatureSet;
+                          use_multithreading::Bool = false)
+    predicted = apply_forest(forest, feature_set; use_multithreading)
+    return confusion_matrix(labels(feature_set), predicted)
 end
 
 function feature_importance(feature_set::AbstractFeatureSet{_L, N};
