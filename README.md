@@ -31,15 +31,21 @@ their importance.
 
 ## Installation
 
-*Note:* FeatureScreening.jl depends on a library called [Dumper.jl][], which is,
-for the time being, not added to the General registry. Due to limitations of the
-Julia package manager, you need to add this dependency manually to your
-projects.
+FeatureScreening.jl depends on a few other open source packages developed by
+[Cursor Insight][] (notably, [Dumper.jl][]), but not registered in the
+[General][] registry at the current time. To let the Julia package manager know
+about these packages, you need to add our [own registry][CIJR] (in addition to
+the General registry) to your Julia environment before installing
+`FeatureScreening.jl` itself:
 
 ```julia
-julia>]
-pkg> add https://github.com/cursorinsight/Dumper.jl
-pkg> add https://github.com/cursorinsight/FeatureScreening.jl
+julia> ]
+pkg> registry add https://github.com/cursorinsight/julia-registry
+     Cloning registry from "https://github.com/cursorinsight/julia-registry"
+       Added registry `CursorInsightJuliaRegistry` to
+       `~/.julia/registries/CursorInsightJuliaRegistry`
+
+pkg> add FeatureScreening
 ```
 
 ## Usage
@@ -205,7 +211,7 @@ memory, which can be useful (and significantly faster) for large feature sets.
 The following HDF5 datasets are written to (and expected to be readable from)
 the file:
 
-* `created_at` (datetime formatted string): timestamp of the time of creation;
+* `created_at` (date-time formatted string): timestamp of the time of creation;
 * `id` (string): a UUID of the feature set;
 * `labels` (vector of *L* items): sample class labels;
 * `names` (vector of *N* items): feature names;
@@ -259,5 +265,8 @@ intermediate states into HDF5 files, too (under the same directory).
 Currently, importance computation is using random forests. Future versions may
 add other ranking methods as well.
 
+[CIJR]: https://github.com/cursorinsight/julia-registry
+[Cursor Insight]: https://www.cursorinsight.com/
 [Dumper.jl]: https://github.com/cursorinsight/Dumper.jl
-[HDF5]: https://www.hdfgroup.org/solutions/hdf5/
+[General]: https://github.com/JuliaRegistries/General
+[HDF5]: https://www.hdfgroup.org/solutions/hdf5

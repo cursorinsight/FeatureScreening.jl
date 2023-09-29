@@ -19,8 +19,8 @@ jobs:
   build:
     strategy:
       matrix:
-        # Test with Julia 1.6 (lowest compat version) and latest Julia 1.8
-        julia-version: ["1.6", "1.8"]
+        # Test with Julia 1.6 (lowest compat version) and latest Julia 1
+        julia-version: ["1.6", "1"]
 
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -33,6 +33,9 @@ jobs:
         uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.julia-version }}
+
+      - name: Add Cursor Insight Julia Registry
+        run: julia -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url="https://github.com/cursorinsight/julia-registry"))'
 
       - name: Run Pkg.build
         uses: julia-actions/julia-buildpkg@v1
