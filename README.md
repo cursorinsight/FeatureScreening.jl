@@ -2,12 +2,15 @@
 
 [![CI](https://github.com/cursorinsight/FeatureScreening.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/cursorinsight/FeatureScreening.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/cursorinsight/FeatureScreening.jl/branch/master/graph/badge.svg?token=P59CK9SA1Z)](https://codecov.io/gh/cursorinsight/FeatureScreening.jl)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 FeatureScreening.jl is a Julia package that provides utilities for finding
 significant features in a feature set, based on their importance in
 classification.
 
-See paper under review on [arXiv](https://arxiv.org/abs/2305.15793).
+For an in depth discussion of the underlying algorithm, see paper published in
+[Machine Learning: Science and Technology][MLST] (an IOPscience journal) at DOI
+[10.1088/2632-2153/ad020e](https://doi.org/10.1088/2632-2153/ad020e).
 
 ## Context
 
@@ -270,3 +273,4 @@ add other ranking methods as well.
 [Dumper.jl]: https://github.com/cursorinsight/Dumper.jl
 [General]: https://github.com/JuliaRegistries/General
 [HDF5]: https://www.hdfgroup.org/solutions/hdf5
+[MLST]: https://iopscience.iop.org/journal/2632-2153
