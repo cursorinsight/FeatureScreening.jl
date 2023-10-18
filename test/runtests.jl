@@ -46,5 +46,4 @@ include("Fixtures.jl")
 using .Fixtures: fixture
 
 include("test.basics.jl")
-include("test.feature-set.jl")
 include("test.importance.jl")

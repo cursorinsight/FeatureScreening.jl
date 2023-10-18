@@ -8,8 +8,8 @@
 ### Imports
 ###=============================================================================
 
-using FeatureScreening.Utilities: build_forest
-using DecisionTree: Ensemble as RandomForest, Node, Leaf
+using FeatureSets: AbstractFeatureSet
+using DecisionTree: Ensemble as RandomForest, Node, Leaf, build_forest
 using Random: AbstractRNG, GLOBAL_RNG
 using StatsBase: sample, weights
 
@@ -28,51 +28,42 @@ const DEFAULT_CONFIG_FOR_FEATURE_IMPORTANCE =
      min_samples_split    = 4,
      min_purity_increase  = 0.1)
 
-# TODO https://github.com/cursorinsight/FeatureScreening.jl/issues/18
 """
-    feature_importance(features...; config = (;))
+    feature_importance(fs::AbstractFeatureSet; config = (;))
 
-- `features` are the `build_forest` arguments
-- `config` is the configuration of the `build_forest` call
+Rank feature importances based on their frequency in a random forest. Return a
+vector of pairs, mapping feature names to importances.
 
-Rank feature importances based on their frequency in a random forest.
-
-Algorithm:
-  1. Build a random forest.
-  2. Iterate over all the trees of this forest to count occurrences of each
-     features.
-  3. Sort features by their importance (frequency).
+Steps:
+1. build a random forest;
+2. iterate over the forest's trees to count the occurrences of every feature;
+3. sort features by their importance (frequency).
 """
-function feature_importance(features...;
-                            config::NamedTuple = (;),
+function feature_importance(feature_set::AbstractFeatureSet{_L, N};
+                            config = (;),
                             kwargs...
-                           )::Vector{Pair{Int, Int}}
-    config::NamedTuple =
-        (; DEFAULT_CONFIG_FOR_FEATURE_IMPORTANCE..., config...)
-
-    # 1. step
-    forest::RandomForest = build_forest(features...; config, kwargs...)
-
-    # 2-3. step
-    importances::Vector{Pair{Int, Int}} = feature_importance(forest)
-
-    return importances
+                           )::Vector{Pair{N, Int}} where {_L, N}
+    config::NamedTuple = merge(DEFAULT_CONFIG_FOR_FEATURE_IMPORTANCE, config)
+    forest::RandomForest = build_forest(feature_set; config, kwargs...)
+    return [names(feature_set)[i] => importance
+            for (i, importance) in feature_importance(forest)]
 end
 
 """
     feature_importance(forest::RandomForest)
 
-This method contains the 2. and 3. steps only.
+Rank feature importances based on their frequency in a random `forest`. Return a
+vector of pairs, mapping feature indices to importances.
+
+Steps:
+1. iterate over the forest's trees to count the occurrences of every feature;
+2. sort features by their importance (frequency).
 """
 function feature_importance(forest::RandomForest)::Vector{Pair{Int, Int}}
-    # 2. step
     occurrences::Dict{Int, Int} =
         fold(accumulate_id!, forest; init = Dict{Int, Int}())
-
-    # 3. step
     importances::Vector{Pair{Int, Int}} =
         sort!(collect(occurrences); by = last, rev = true)
-
     return importances
 end
 

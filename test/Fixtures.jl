@@ -16,7 +16,7 @@ export fixture
 ### Imports
 ###=============================================================================
 
-using FeatureScreening.Types: FeatureSet
+using FeatureScreening: FeatureSet
 
 ###=============================================================================
 ### Implementation

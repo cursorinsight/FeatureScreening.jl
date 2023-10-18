@@ -8,8 +8,8 @@
 ### Imports
 ###=============================================================================
 
+using FeatureScreening: FeatureSet, features, labels, names
 using FeatureScreening: feature_importance
-using FeatureScreening.Types: FeatureSet, names
 using FeatureScreening: SelectTop, SelectRandom, SelectByImportance
 using FeatureScreening: select, get_count, label, importance
 using StableRNGs: StableRNG

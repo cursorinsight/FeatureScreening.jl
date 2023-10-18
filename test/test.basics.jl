@@ -8,8 +8,7 @@
 ### Imports
 ###=============================================================================
 
-using FeatureScreening.Types: FeatureSet, names
-using FeatureScreening: screen
+using FeatureScreening: FeatureSet, names, screen
 
 ###=============================================================================
 ### Tests

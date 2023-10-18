@@ -7,32 +7,21 @@
 module FeatureScreening
 
 ###=============================================================================
-### Exports
+### Includes
 ###=============================================================================
 
-# API
-export screen
-
-# Types
-export AbstractFeatureSet, FeatureSet
-
-# Types API
-export id, labels, names, features, load, save
+include("Utilities.jl")
+include("importance.jl")
 
 ###=============================================================================
 ### Imports
 ###=============================================================================
 
+# Exports
+using Reexport: @reexport
+
 # Utilities
-include("Utilities.jl")
-using FeatureScreening.Utilities: Maybe, make_rng
-
-include("importance.jl")
-
-# FeatureSets
-include("Types.jl")
-using FeatureScreening.Types: AbstractFeatureSet, FeatureSet
-using FeatureScreening.Types: id, labels, names, features, load, save
+using .Utilities: Maybe, make_rng
 
 # API dependencies
 using Base.Iterators: partition
@@ -41,9 +30,26 @@ using Dumper: @dump
 using ProgressMeter: Progress, next!
 using Random: AbstractRNG, GLOBAL_RNG, shuffle as __shuffle
 
+import FeatureSets
+
+###=============================================================================
+### Exports
+###=============================================================================
+
+# API
+export screen
+
+# FeatureSets
+@reexport using FeatureSets: AbstractFeatureSet, FeatureSet
+@reexport using FeatureSets: id, labels, names, features, load, save
+
 ###=============================================================================
 ### API
 ###=============================================================================
+
+# External lib FeatureSets implements functionality of legacy submodule Types.
+# Keep an alias here to maintain backwards compatibility.
+const Types = FeatureSets
 
 const DEFAULT_SCREEN_CONFIG =
     (n_subfeatures          = -1,
